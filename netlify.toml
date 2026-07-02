@@ -1,0 +1,41 @@
+# GitHub → Netlify 전체 배포 설정
+#  · 정적 프런트: public/  · 백엔드: netlify/functions/api.js (serverless-http + Blobs)
+
+[build]
+  publish = "public"
+  command = ""
+
+[functions]
+  node_bundler = "esbuild"
+
+# ── API/인증/검색/손글씨/상태 → 함수로 (단일 도메인, CORS 없음) ──
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api"
+  status = 200
+[[redirects]]
+  from = "/auth/*"
+  to = "/.netlify/functions/api"
+  status = 200
+[[redirects]]
+  from = "/search"
+  to = "/.netlify/functions/api"
+  status = 200
+[[redirects]]
+  from = "/synonyms"
+  to = "/.netlify/functions/api"
+  status = 200
+[[redirects]]
+  from = "/handwriting"
+  to = "/.netlify/functions/api"
+  status = 200
+[[redirects]]
+  from = "/health"
+  to = "/.netlify/functions/api"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

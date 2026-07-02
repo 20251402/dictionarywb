@@ -1,0 +1,22 @@
+{
+  "name": "korean-dictionary-netlify",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "국어·영어·한자·중세국어 사전 웹앱 (GitHub → Netlify, 서버리스 + Blobs)",
+  "scripts": {
+    "start": "node local-server.js",
+    "dev": "netlify dev"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "serverless-http": "^3.2.0"
+  },
+  "devDependencies": {
+    "dotenv": "^16.4.7"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
