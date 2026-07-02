@@ -43,6 +43,11 @@
   #picker{position:absolute;inset:0;z-index:30;background:var(--paper);display:flex;flex-direction:column;
     padding:max(34px,env(safe-area-inset-top)) 22px max(22px,env(safe-area-inset-bottom));}
   #picker.hide{display:none;}
+  .pick-login{position:absolute;top:max(18px,env(safe-area-inset-top));right:20px;z-index:3;display:flex;align-items:center;gap:6px;height:36px;padding:0 15px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:13.5px;font-weight:700;color:var(--ink);box-shadow:0 2px 12px -7px rgba(0,0,0,.35);transition:border-color .15s var(--ease),transform .12s var(--ease);}
+  .pick-login:hover{border-color:var(--accent);color:var(--accent);}
+  .pick-login:active{transform:scale(.96);}
+  .pick-login .pl-ic{font-size:12px;filter:grayscale(.2);}
+  .pick-login .pl-nm{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .pick-head{margin-top:6vh;}
   .pick-eyebrow{font-size:12px;letter-spacing:.22em;font-weight:700;text-transform:uppercase;color:var(--ink-3);}
   .pick-title{margin:10px 0 0;font-size:29px;font-weight:700;line-height:1.25;letter-spacing:-.02em;}
@@ -81,8 +86,8 @@
   .seg[aria-selected="true"]{background:var(--accent);color:#fff;box-shadow:0 2px 8px -3px var(--accent);}
   .seg:active{transform:scale(.97);}
 
-  .searchrow{display:flex;align-items:center;gap:8px;margin-top:11px;}
-  .field{flex:1 1 auto;display:flex;align-items:center;gap:9px;background:var(--card);border:1.5px solid var(--line);
+  .searchrow{display:flex;align-items:center;gap:7px;margin-top:11px;min-width:0;}
+  .field{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:9px;background:var(--card);border:1.5px solid var(--line);
     border-radius:13px;padding:0 12px;height:46px;transition:border-color .18s var(--ease),box-shadow .18s var(--ease);}
   .field:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
   .field svg{flex:0 0 auto;color:var(--ink-3);}
@@ -90,7 +95,7 @@
   .field input::placeholder{color:var(--ink-3);}
   .clearbtn{flex:0 0 auto;width:22px;height:22px;border-radius:50%;display:none;place-items:center;background:var(--line);color:var(--ink-2);}
   .clearbtn.show{display:grid;}
-  .gobtn{flex:0 0 auto;height:46px;padding:0 16px;border-radius:13px;background:var(--accent);color:#fff;font-weight:700;font-size:15px;transition:transform .12s var(--ease);}
+  .gobtn{flex:0 0 auto;height:46px;padding:0 14px;border-radius:13px;background:var(--accent);color:#fff;font-weight:700;font-size:15px;transition:transform .12s var(--ease);}
   .gobtn:active{transform:scale(.96);}
 
   .recent{display:flex;gap:7px;overflow-x:auto;margin-top:11px;padding-bottom:2px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
@@ -346,6 +351,7 @@
 
   <!-- 선택 화면 -->
   <section id="picker">
+    <button class="pick-login" id="pickLoginBtn" type="button"><span class="pl-ic">👤</span><span class="pl-nm">로그인</span></button>
     <div class="pick-head">
       <div class="pick-eyebrow">사전</div>
       <h1 class="pick-title">무엇으로<br><b>시작할까요?</b></h1>
@@ -643,11 +649,13 @@ async function initBackend(){
 }
 function renderAccount(){
   acctBtn.hidden=false;
+  const plnm=$("#pickLoginBtn")?.querySelector(".pl-nm");
   if(ME){
     const ini=(ME.name||"?").trim().charAt(0)||"?";
     const av=ME.picture?`<img src="${esc(ME.picture)}" alt="" referrerpolicy="no-referrer">`:esc(ini);
     acctBtn.innerHTML=`<span class="av">${av}</span><span class="nm">${esc(ME.name||"내 계정")}</span>`;
-  }else acctBtn.innerHTML=`<span class="nm">로그인</span>`;
+    if(plnm)plnm.textContent=ME.name||"내 계정";
+  }else{ acctBtn.innerHTML=`<span class="nm">로그인</span>`; if(plnm)plnm.textContent="로그인"; }
 }
 function openSheet(html){ sheet.innerHTML=html; sheetBack.classList.add("show"); }
 function closeSheet(){ sheetBack.classList.remove("show"); }
@@ -783,6 +791,7 @@ function quizSheet(data){
 async function logout(){ try{ await fetch(API_BASE+"/auth/logout",{method:"POST",credentials:"include"}); }catch{} ME=null; renderAccount(); closeSheet(); }
 
 acctBtn.addEventListener("click",()=> ME?accountSheet():showLogin("login"));
+$("#pickLoginBtn").addEventListener("click",()=> ME?accountSheet():showLogin("login"));
 $("#histBtn").addEventListener("click",()=>{
   if(ME){ if(["korean","english","hanja","ancient"].includes(dict)) histDict=dict; histView="list"; histSelMode=false; histSel.clear(); renderHistorySheet(); }
   else loginPromptModal();
