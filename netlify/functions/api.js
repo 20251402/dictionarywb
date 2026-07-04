@@ -1,7 +1,7 @@
 // Netlify Function — Express 앱을 serverless-http로 감싸고,
 // 요청마다 Netlify Blobs에서 데이터(계정·검색기록)를 로드 → 처리 → 변경 시 저장한다.
 import serverless from "serverless-http";
-import { getStore } from "@netlify/blobs";
+import { getStore, connectLambda } from "@netlify/blobs";
 import { createApp } from "../../lib/app.js";
 import { makeStore, emptyData } from "../../lib/store.js";
 
@@ -51,6 +51,9 @@ async function save(data) {
 }
 
 export const handler = async (event, context) => {
+  // Netlify Blobs 컨텍스트 초기화. serverless-http(람다형) 함수에서는 이 호출이 없으면
+  // 자동 컨텍스트가 잡히지 않아 저장/조회가 실패한다(계정·검색기록이 안 남는 원인).
+  try { connectLambda(event); } catch { }
   // 원본 요청 경로 보장(리라이트로 들어와도 Express가 실제 경로를 보도록)
   if (event.rawUrl) { try { event.path = new URL(event.rawUrl).pathname; } catch { } }
   STATE.data = await load();
