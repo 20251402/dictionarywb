@@ -433,6 +433,7 @@
         <div class="htabs" id="loginTabs"></div>
         <input class="auth-in" id="authUser" type="text" autocomplete="username" autocapitalize="off" placeholder="아이디 (2~20자)" />
         <input class="auth-in" id="authPw" type="password" autocomplete="current-password" placeholder="비밀번호 (6자 이상)" />
+        <input class="auth-in" id="authPw2" type="password" autocomplete="new-password" placeholder="비밀번호 확인 (한 번 더)" hidden />
         <div class="auth-msg" id="authMsg"></div>
         <button class="auth-submit" id="authSubmitBtn">로그인</button>
       </div>
@@ -552,12 +553,11 @@ let reqId=0;
 let lastResults=[], lastSelDict="";
 async function doSearch(query){
   const q=(query??input.value).trim(); input.value=q; toggleClear();
-  if(!q){showEmpty(); hanModes.hidden=true; return;}
+  if(!q){showEmpty(); hanModes.hidden=(dict!=="hanja"); return;}
   const my=++reqId; showLoading();
   try{const entries=await fetchEntries(dict,q);
     if(my!==reqId)return;
-    const browse = dict==="hanja" && entries.length && entries[0].kind==="browse";
-    hanModes.hidden=!browse; if(browse) syncHanModes();
+    hanModes.hidden=(dict!=="hanja"); if(dict==="hanja") syncHanModes();
     if(!entries.length){showNoResult(q);return;}
     addRecent(q);
     if(dict==="hanja"){
@@ -595,7 +595,7 @@ hanModes.addEventListener("click",e=>{
 });
 
 /* 최근 검색 */
-function addRecent(q){const a=recent[dict];const i=a.indexOf(q);if(i>-1)a.splice(i,1);a.unshift(q);if(a.length>8)a.pop();renderRecent();}
+function addRecent(q){ if(!ME)return; const a=recent[dict];const i=a.indexOf(q);if(i>-1)a.splice(i,1);a.unshift(q);if(a.length>8)a.pop();renderRecent();}   // 로그인 상태에서만 최근검색 기록
 function renderRecent(){recentBox.innerHTML=(recent[dict]||[]).map(q=>`<button class="chip" data-find="${esc(q)}">${esc(q)}</button>`).join("");}
 
 /* 모드 전환 */
@@ -607,7 +607,7 @@ function setMode(d,{clear=false}={}){
   document.querySelectorAll(".switcher .seg").forEach(b=>b.setAttribute("aria-selected",b.dataset.dict===d?"true":"false"));
   document.getElementById("penBtn").style.display=(d==="hanja"||d==="ancient")?"grid":"none";   // 손글씨: 한자·중세
   document.getElementById("kbdBtn").hidden=(d!=="ancient");                                      // 옛한글 자판: 중세국어만
-  hanModes.hidden=true;
+  hanModes.hidden=(d!=="hanja"); if(d==="hanja") syncHanModes();                                 // 음/뜻: 한자사전에서 항상 표시
   input.placeholder=LABEL[d].ph;
   if(clear){input.value="";toggleClear();}
   renderRecent();
@@ -676,6 +676,7 @@ function renderLoginScreen(){
   const tabs=$("#loginTabs");
   if(tabs)tabs.innerHTML=["login","register"].map(m=>`<button class="htab${authMode===m?' on':''}" data-authmode="${m}" style="--c:var(--accent)">${m==="login"?"로그인":"회원가입"}</button>`).join("");
   const pw=$("#authPw"); if(pw)pw.setAttribute("autocomplete",authMode==="login"?"current-password":"new-password");
+  const pw2=$("#authPw2"); if(pw2){ pw2.hidden=(authMode!=="register"); if(pw2.hidden)pw2.value=""; }   // 회원가입일 때만 비번 확인칸
   const sub=$("#authSubmitBtn"); if(sub)sub.textContent=authMode==="login"?"로그인":"가입하고 시작하기";
   const msg=$("#authMsg"); if(msg)msg.textContent="";
 }
@@ -696,6 +697,12 @@ async function authSubmit(){
   const password=$("#authPw")?.value||"";
   const msg=$("#authMsg");
   if(!username||!password){ if(msg)msg.textContent="아이디와 비밀번호를 입력하세요."; return; }
+  if(authMode==="register"){
+    if(password.length<6){ if(msg)msg.textContent="비밀번호는 6자 이상으로 입력하세요."; return; }
+    const pw2=$("#authPw2")?.value||"";
+    if(!pw2){ if(msg)msg.textContent="비밀번호 확인을 입력하세요."; return; }
+    if(password!==pw2){ if(msg)msg.textContent="비밀번호가 일치하지 않습니다."; return; }
+  }
   if(msg)msg.textContent="";
   try{
     const r=await fetch(`${API_BASE}/auth/${authMode}`,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify({username,password})});
@@ -788,7 +795,7 @@ function quizSheet(data){
     if(answered===qs.length)scoreEl.classList.add("fin");
   });
 }
-async function logout(){ try{ await fetch(API_BASE+"/auth/logout",{method:"POST",credentials:"include"}); }catch{} ME=null; renderAccount(); closeSheet(); }
+async function logout(){ try{ await fetch(API_BASE+"/auth/logout",{method:"POST",credentials:"include"}); }catch{} ME=null; for(const k in recent)recent[k].length=0; renderRecent(); renderAccount(); closeSheet(); }
 
 acctBtn.addEventListener("click",()=> ME?accountSheet():showLogin("login"));
 $("#pickLoginBtn").addEventListener("click",()=> ME?accountSheet():showLogin("login"));
@@ -800,7 +807,8 @@ $("#histBtn").addEventListener("click",()=>{
 $("#loginBack").addEventListener("click",hideLogin);
 $("#authSubmitBtn").addEventListener("click",authSubmit);
 $("#authUser").addEventListener("keydown",e=>{ if(e.key==="Enter")$("#authPw").focus(); });
-$("#authPw").addEventListener("keydown",e=>{ if(e.key==="Enter")authSubmit(); });
+$("#authPw").addEventListener("keydown",e=>{ if(e.key==="Enter"){ if(authMode==="register")$("#authPw2").focus(); else authSubmit(); } });
+$("#authPw2").addEventListener("keydown",e=>{ if(e.key==="Enter")authSubmit(); });
 loginScreen.addEventListener("click",e=>{ const t=e.target.closest("[data-authmode]"); if(t){ authMode=t.dataset.authmode; renderLoginScreen(); } });
 promptBack.addEventListener("click",e=>{ if(e.target===promptBack) closePrompt(); });
 promptCard.addEventListener("click",e=>{ const b=e.target.closest("[data-prompt]"); if(!b)return; const a=b.dataset.prompt; closePrompt(); if(a==="gologin")showLogin("login"); });
@@ -826,21 +834,13 @@ sheet.addEventListener("click",e=>{
   if(del){ fetch(`${API_BASE}/api/history/${del.dataset.del}`,{method:"DELETE",credentials:"include"}).then(fillTrash); return; }
 });
 /* ---------- 손글씨 인식 ---------- */
-let hwLang="hanja", hwStrokes=[], hwCv=null, hwCtx=null, hwW=400, hwH=400, hwBuf="";
-const HW_OLD_KEYS=["ㆍ","ㆎ","ㅿ","ㆁ","ㆆ","ㅸ","ㅱ","ㆄ","ㆅ"];   // 손글씨로 인식이 안 되는 옛 자모(눌러서 입력)
-function hwBufRender(){ const b=sheet.querySelector("#hwBuf"); if(b)b.textContent=hwBuf; }
+let hwLang="hanja", hwStrokes=[], hwCv=null, hwCtx=null, hwW=400, hwH=400;
 function openHandwriting(){
-  hwLang = dict==="hanja" ? "hanja" : "hangul";   // 한자사전=한자, 중세국어=한글(옛한글)
-  const isAnc = dict==="ancient"; hwBuf="";
-  openSheet(hHead(isAnc?"손글씨 · 옛한글":"손글씨 입력")
+  hwLang = dict==="hanja" ? "hanja" : "hangul";   // 한자사전=한자, 중세국어=한글
+  openSheet(hHead("손글씨 입력")
     +`<div class="hw-padwrap"><canvas id="hwpad" class="hw-pad"></canvas><span class="hw-ph" id="hwPh">한 글자씩 또박또박 써 보세요</span></div>`
     +`<div class="hw-tools"><button class="sel-btn" data-act="hwundo">↶ 한 획</button><button class="sel-btn" data-act="hwclear">지우기</button><button class="sel-btn primary" data-act="hwreco">인식</button></div>`
-    +`<div class="hw-cands" id="hwCands"><span class="hw-ph">${dict==="hanja"?"인식 후 비슷한 한자 12자에서 골라요":isAnc?"손글씨를 인식하면 후보가 아래 입력칸에 담겨요":"인식 후 후보를 누르면 검색돼요"}</span></div>`
-    +(isAnc?(
-        `<div class="jamo-sec" style="margin-top:8px">옛 자모 <span style="font-weight:400;color:var(--ink-3)">· 손글씨로 안 되는 자모는 눌러서 넣으세요</span></div>`
-       +`<div class="hw-cands" id="hwOld">${HW_OLD_KEYS.map(k=>`<button class="hw-cand old" data-hwold="${esc(k)}">${esc(k)}</button>`).join("")}</div>`
-       +`<div class="hw-bufrow"><span class="hw-buflabel">입력</span><span class="hw-buf serif" id="hwBuf"></span><button class="hw-bk" data-hwact="bk" aria-label="한 글자 지우기">⌫</button><button class="sel-btn primary" data-hwact="hwsearch" style="flex:0 0 auto;width:64px;height:38px">검색</button></div>`
-      ):""));
+    +`<div class="hw-cands" id="hwCands"><span class="hw-ph">${dict==="hanja"?"인식 후 비슷한 한자 12자에서 골라요":"인식 후 후보를 누르면 검색돼요"}</span></div>`);
   requestAnimationFrame(setupPad);
 }
 function setupPad(){
@@ -876,11 +876,7 @@ async function hwReco(){
 $("#penBtn").addEventListener("click",openHandwriting);
 sheet.addEventListener("click",e=>{
   const hwp=e.target.closest("[data-hwpick]");
-  if(hwp){ const q=hwp.dataset.hwpick; if(dict==="ancient"){ hwBuf+=q; hwBufRender(); } else { closeSheet(); input.value=q; toggleClear(); doSearch(q); } return; }
-  const old=e.target.closest("[data-hwold]"); if(old){ hwBuf+=old.dataset.hwold; hwBufRender(); return; }
-  const hact=e.target.closest("[data-hwact]"); if(hact){ const a=hact.dataset.hwact;
-    if(a==="bk"){ hwBuf=[...hwBuf].slice(0,-1).join(""); hwBufRender(); }
-    else if(a==="hwsearch"){ const q=hwBuf.trim(); closeSheet(); if(q){ input.value=q; toggleClear(); doSearch(q); } } return; }
+  if(hwp){ const q=hwp.dataset.hwpick; closeSheet(); input.value=q; toggleClear(); doSearch(q); return; }
   const act=e.target.closest("[data-act]"); if(!act)return; const a=act.dataset.act;
   if(a==="hwundo")return hwUndo();
   if(a==="hwclear")return hwClearPad();
