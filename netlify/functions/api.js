@@ -11,7 +11,9 @@ const store = makeStore(() => STATE.data);
 const app = createApp({ store, env: process.env, serveStatic: false });
 const sls = serverless(app);
 
-const blob = () => getStore({ name: "dict-db", consistency: "strong" });
+// consistency:"strong"은 람다형 함수에서 uncachedEdgeURL이 없어 읽기 실패 → 기본(eventual) 사용.
+// (저장 직전 재로드+병합 로직이 있어 소규모에선 일관성 문제 거의 없음)
+const blob = () => getStore({ name: "dict-db" });
 async function load() {
   try { const v = await blob().get("db", { type: "json" }); return (v && v.users) ? v : emptyData(); }
   catch { return emptyData(); }
