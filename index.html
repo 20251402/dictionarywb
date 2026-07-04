@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#F7F6F3" />
+<title>사전 · 국어 / English / 漢字 / 중세국어</title>
+
+<link rel="stylesheet" as="style" crossorigin
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --paper:#F7F6F3; --card:#FFFFFF;
+    --ink:#1C1B19; --ink-2:#6E6A63; --ink-3:#9A958C;
+    --line:#E9E6E0; --line-2:#F0EEE9;
+    --accent:#2E4C8A; --accent-soft:rgba(46,76,138,.10);
+    --radius:16px; --radius-sm:11px;
+    --ease:cubic-bezier(.22,.61,.36,1); --maxw:520px;
+    --korean:#2E4C8A;  --korean-soft:rgba(46,76,138,.10);
+    --english:#237A66; --english-soft:rgba(35,122,102,.10);
+    --hanja:#BC3B2E;   --hanja-soft:rgba(188,59,46,.10);
+    --ancient:#8A6D3B; --ancient-soft:rgba(138,109,59,.12);
+  }
+  *{box-sizing:border-box;}
+  [hidden]{display:none!important;}   /* hidden 속성이 항상 우선하도록(음/뜻 토글은 한자사전에서만 노출) */
+  html,body{margin:0;padding:0;}
+  body{
+    background:#E8E6E1;color:var(--ink);
+    font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;line-height:1.55;
+  }
+  .serif{font-family:"Noto Serif KR","Apple SD Gothic Neo",serif;}
+  .app{max-width:var(--maxw);margin:0 auto;min-height:100vh;min-height:100dvh;background:var(--paper);position:relative;}
+  @media (min-width:560px){.app{box-shadow:0 0 0 1px var(--line),0 30px 80px -40px rgba(0,0,0,.35);}}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+  :focus-visible{outline:2.5px solid var(--accent);outline-offset:2px;border-radius:8px;}
+
+  /* 선택 화면 */
+  #picker{position:absolute;inset:0;z-index:30;background:var(--paper);display:flex;flex-direction:column;
+    padding:max(34px,env(safe-area-inset-top)) 22px max(22px,env(safe-area-inset-bottom));}
+  #picker.hide{display:none;}
+  .pick-login{position:absolute;top:max(18px,env(safe-area-inset-top));right:20px;z-index:3;display:flex;align-items:center;gap:6px;height:36px;padding:0 15px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:13.5px;font-weight:700;color:var(--ink);box-shadow:0 2px 12px -7px rgba(0,0,0,.35);transition:border-color .15s var(--ease),transform .12s var(--ease);}
+  .pick-login:hover{border-color:var(--accent);color:var(--accent);}
+  .pick-login:active{transform:scale(.96);}
+  .pick-login .pl-ic{font-size:12px;filter:grayscale(.2);}
+  .pick-login .pl-nm{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pick-head{margin-top:6vh;}
+  .pick-eyebrow{font-size:12px;letter-spacing:.22em;font-weight:700;text-transform:uppercase;color:var(--ink-3);}
+  .pick-title{margin:10px 0 0;font-size:29px;font-weight:700;line-height:1.25;letter-spacing:-.02em;}
+  .pick-title b{color:var(--accent);}
+  .pick-sub{margin:11px 0 0;color:var(--ink-2);font-size:14.5px;}
+  .pick-list{margin-top:auto;display:flex;flex-direction:column;gap:10px;}
+  .pick-card{--c:var(--ink);--cs:var(--line-2);display:flex;align-items:center;gap:15px;width:100%;text-align:left;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:15px 16px;
+    transition:transform .18s var(--ease),border-color .18s var(--ease),box-shadow .18s var(--ease);}
+  .pick-card:active{transform:scale(.985);}
+  .pick-card:hover{border-color:var(--c);box-shadow:0 1px 0 var(--c) inset,0 8px 24px -16px var(--c);}
+  .pick-glyph{flex:0 0 auto;width:52px;height:52px;border-radius:13px;display:grid;place-items:center;
+    background:var(--cs);color:var(--c);font-size:27px;font-weight:700;line-height:1;}
+  .pick-meta{flex:1 1 auto;min-width:0;}
+  .pick-name{font-size:17px;font-weight:700;letter-spacing:-.01em;}
+  .pick-name .en{color:var(--ink-3);font-weight:600;font-size:12.5px;margin-left:7px;letter-spacing:0;}
+  .pick-desc{color:var(--ink-2);font-size:12.5px;margin-top:2px;}
+  .pick-arrow{flex:0 0 auto;color:var(--ink-3);transition:transform .18s var(--ease),color .18s;}
+  .pick-card:hover .pick-arrow{color:var(--c);transform:translateX(3px);}
+  .pick-foot{text-align:center;color:var(--ink-3);font-size:11.5px;margin-top:18px;}
+
+  /* 메인 */
+  #main.hide{display:none;}
+  .topbar{position:sticky;top:0;z-index:20;
+    background:color-mix(in srgb,var(--paper) 86%,transparent);
+    backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);
+    border-bottom:1px solid var(--line);padding:max(12px,env(safe-area-inset-top)) 16px 12px;}
+  .bar-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .bar-title{font-size:14px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:baseline;gap:7px;}
+  .bar-title .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block;}
+  .bar-title .sub{color:var(--ink-3);font-weight:600;font-size:11.5px;letter-spacing:.04em;}
+
+  .switcher{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;background:var(--line-2);border-radius:12px;padding:3px;}
+  .seg{border-radius:9px;padding:8px 2px;font-size:13.5px;font-weight:600;color:var(--ink-2);
+    transition:color .2s var(--ease),background .2s var(--ease);letter-spacing:-.01em;}
+  .seg[aria-selected="true"]{background:var(--accent);color:#fff;box-shadow:0 2px 8px -3px var(--accent);}
+  .seg:active{transform:scale(.97);}
+
+  .searchrow{display:flex;align-items:center;gap:7px;margin-top:11px;min-width:0;}
+  .field{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:9px;background:var(--card);border:1.5px solid var(--line);
+    border-radius:13px;padding:0 12px;height:46px;transition:border-color .18s var(--ease),box-shadow .18s var(--ease);}
+  .field:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .field svg{flex:0 0 auto;color:var(--ink-3);}
+  .field input{flex:1 1 auto;min-width:0;border:none;outline:none;background:none;font-size:16px;color:var(--ink);font-family:inherit;}
+  .field input::placeholder{color:var(--ink-3);}
+  .clearbtn{flex:0 0 auto;width:22px;height:22px;border-radius:50%;display:none;place-items:center;background:var(--line);color:var(--ink-2);}
+  .clearbtn.show{display:grid;}
+  .gobtn{flex:0 0 auto;height:46px;padding:0 14px;border-radius:13px;background:var(--accent);color:#fff;font-weight:700;font-size:15px;transition:transform .12s var(--ease);}
+  .gobtn:active{transform:scale(.96);}
+
+  .recent{display:flex;gap:7px;overflow-x:auto;margin-top:11px;padding-bottom:2px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+  .recent::-webkit-scrollbar{display:none;}
+  .recent:empty{display:none;}
+  .chip{flex:0 0 auto;white-space:nowrap;font-size:13px;font-weight:600;color:var(--ink-2);
+    background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 13px;transition:border-color .15s,color .15s;}
+  .chip:hover{border-color:var(--accent);color:var(--accent);}
+
+  .results{padding:18px 16px max(40px,env(safe-area-inset-bottom));}
+
+  .entry{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px 18px;margin-bottom:13px;animation:rise .42s var(--ease) both;}
+  @keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  .entry-head{display:flex;align-items:flex-start;gap:12px;}
+  .headword{font-size:27px;font-weight:700;letter-spacing:-.01em;line-height:1.2;}
+  .headword .origin{font-size:16px;color:var(--ink-3);font-weight:500;margin-left:8px;}
+  .phon{color:var(--accent);font-size:15px;font-weight:500;margin-top:4px;}
+  .pos{display:inline-block;font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:2px 8px;margin:14px 0 7px;}
+  .sense{display:flex;gap:9px;margin:7px 0;}
+  .sense .num{flex:0 0 auto;color:var(--accent);font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;min-width:14px;}
+  .sense .def{font-size:15.5px;color:var(--ink);line-height:1.6;}
+  .ex{margin:6px 0 2px 23px;padding-left:11px;border-left:2px solid var(--line);color:var(--ink-2);font-size:14px;}
+  .ex .trans{color:var(--ink-3);display:block;font-size:13px;margin-top:1px;}
+  .hanja-top{display:flex;gap:16px;align-items:center;}
+  .hanja-char{flex:0 0 auto;width:80px;height:80px;border-radius:14px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-size:50px;line-height:1;}
+  .hanja-read{font-size:21px;font-weight:700;letter-spacing:.02em;}
+  .hanja-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .tag{font-size:12.5px;color:var(--ink-2);background:var(--line-2);border-radius:7px;padding:3px 9px;}
+  .tag b{color:var(--ink);font-weight:700;}
+  .word-list{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px;}
+  .word{font-size:14px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:6px 11px;transition:border-color .15s,color .15s;}
+  .word:hover{border-color:var(--accent);color:var(--accent);}
+  .word .ko{color:var(--ink-3);margin-left:5px;font-size:13px;}
+  .idiom-list{display:flex;flex-direction:column;gap:7px;margin-top:8px;}
+  .idiom{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;text-align:left;width:100%;
+    background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 11px;transition:border-color .15s;}
+  .idiom:hover{border-color:var(--accent);}
+  .idiom .iw{font-size:15px;font-weight:700;letter-spacing:.03em;}
+  .idiom .ik{font-size:13px;color:var(--accent);font-weight:600;}
+  .idiom .idf{font-size:13px;color:var(--ink-2);flex-basis:100%;line-height:1.5;}
+  .divider{height:1px;background:var(--line-2);margin:15px 0;}
+  .sec-label{font-size:12px;font-weight:700;color:var(--ink-3);letter-spacing:.06em;margin-bottom:2px;}
+
+  .state{text-align:center;padding:42px 24px;}
+  .state-glyph{width:64px;height:64px;border-radius:18px;margin:0 auto 16px;display:grid;place-items:center;font-size:32px;background:var(--accent-soft);color:var(--accent);}
+  .state-title{font-size:17px;font-weight:700;}
+  .state-desc{color:var(--ink-2);font-size:14px;margin-top:7px;line-height:1.65;}
+  .sug{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:18px;}
+  .spinner{width:26px;height:26px;border-radius:50%;border:3px solid var(--accent-soft);border-top-color:var(--accent);margin:0 auto;animation:spin .7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .note{margin:14px 0 0;font-size:12px;color:var(--ink-3);background:var(--line-2);border-radius:10px;padding:11px 13px;line-height:1.6;text-align:left;}
+  .note code{font-family:ui-monospace,Menlo,monospace;color:var(--accent);font-size:11.5px;}
+
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important;}}
+  .bar-actions{display:flex;align-items:center;gap:6px;}
+  .hanmodes{display:flex;gap:6px;margin-top:9px;}
+  .hanmode{flex:0 0 auto;min-width:58px;height:32px;border-radius:9px;border:1.5px solid var(--line);background:var(--card);color:var(--ink-2);font-size:13.5px;font-weight:600;}
+  .hanmode.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);}
+  .browse-head{font-size:13.5px;font-weight:700;color:var(--ink-2);margin:2px 2px 12px;}
+  .browse-n{color:var(--accent);font-weight:700;margin-left:4px;}
+  .browse-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:8px;}
+  .browse-ch{display:flex;flex-direction:column;align-items:center;gap:3px;padding:12px 6px;border:1px solid var(--line);border-radius:13px;background:var(--card);transition:border-color .15s,transform .1s;}
+  .browse-ch:hover{border-color:var(--accent);}
+  .browse-ch:active{transform:scale(.97);}
+  .browse-ch .bc{font-size:30px;line-height:1;color:var(--ink);}
+  .browse-ch .br{font-size:12px;color:var(--ink-3);text-align:center;}
+  .acct-btn{display:flex;align-items:center;gap:6px;max-width:142px;height:30px;padding:0 10px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:12.5px;font-weight:600;color:var(--ink);transition:border-color .15s;}
+  .acct-btn:hover{border-color:var(--accent);}
+  .acct-btn .av{width:18px;height:18px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;flex:0 0 auto;overflow:hidden;}
+  .acct-btn .av img{width:100%;height:100%;object-fit:cover;}
+  .acct-btn .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sheet-back{position:fixed;inset:0;z-index:50;background:rgba(20,18,15,.40);display:none;align-items:flex-end;justify-content:center;}
+  .sheet-back.show{display:flex;}
+  .sheet{width:100%;max-width:var(--maxw);background:var(--paper);border-radius:20px 20px 0 0;padding:18px 18px max(20px,env(safe-area-inset-bottom));box-shadow:0 -12px 44px -16px rgba(0,0,0,.42);animation:sheetUp .28s var(--ease);max-height:82vh;display:flex;flex-direction:column;}
+  @keyframes sheetUp{from{transform:translateY(22px);opacity:.5;}to{transform:none;opacity:1;}}
+  .sheet-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex:0 0 auto;}
+  .sheet-h b{font-size:16px;font-weight:700;}
+  .sheet-x{width:30px;height:30px;border-radius:50%;background:var(--line-2);color:var(--ink-2);display:grid;place-items:center;font-size:14px;}
+  .login-note{font-size:12px;color:var(--ink-3);margin-top:6px;line-height:1.65;}
+  .auth-in{width:100%;height:48px;border:1px solid var(--line);border-radius:12px;background:var(--card);padding:0 14px;font-size:16px;color:var(--ink);margin-bottom:9px;}
+  .auth-in:focus{border-color:var(--accent);outline:none;}
+  .auth-msg{min-height:18px;font-size:13px;color:var(--hanja);margin:2px 2px 8px;}
+  .auth-submit{width:100%;height:48px;border-radius:12px;background:var(--accent);color:#fff;font-size:15px;font-weight:700;}
+  .auth-submit:active{transform:scale(.99);}
+  .menu-item{display:flex;align-items:center;gap:10px;width:100%;height:46px;border-radius:11px;background:var(--card);border:1px solid var(--line);padding:0 14px;font-size:15px;font-weight:600;color:var(--ink);margin-bottom:8px;}
+  .menu-item.danger{color:var(--hanja);}
+  .hist-list{overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  .hist-row{display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px solid var(--line-2);}
+  .hist-row .hb{flex:0 0 auto;font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:2px 7px;}
+  .hist-row .hq{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;color:var(--ink);}
+  .hist-row .hx{flex:0 0 auto;width:26px;height:26px;border-radius:50%;color:var(--ink-3);display:grid;place-items:center;font-size:12px;}
+  .hist-empty{text-align:center;color:var(--ink-3);font-size:14px;padding:34px 0;}
+  /* 검색 기록: 탭 · 선택 · 휴지통 · 퀴즈 */
+  .htabs{display:flex;gap:6px;margin-bottom:12px;flex:0 0 auto;}
+  .htab{flex:1;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-weight:700;font-size:14px;color:var(--ink-3);}
+  .htab.on{color:#fff;background:var(--c);border-color:var(--c);}
+  .hist-sub{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex:0 0 auto;}
+  .hist-hint{font-size:12px;color:var(--ink-3);}
+  .link-btn{font-size:13px;font-weight:700;color:var(--ink-2);padding:5px 8px;border-radius:8px;}
+  .link-btn.danger{color:var(--hanja);}
+  .sel-bar{display:flex;align-items:center;gap:7px;margin-bottom:8px;flex:0 0 auto;flex-wrap:wrap;}
+  .sel-n{font-size:13px;font-weight:700;color:var(--accent);margin-right:auto;}
+  .sel-btn{height:34px;padding:0 12px;border-radius:9px;border:1px solid var(--line);background:var(--card);font-weight:700;font-size:13px;color:var(--ink);}
+  .sel-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .hist-row.selectable{cursor:pointer;}
+  .hist-row .hck{flex:0 0 auto;width:0;overflow:hidden;opacity:0;transition:width .15s,opacity .15s;color:var(--accent);font-weight:800;text-align:center;}
+  .hist-row.selectable .hck{width:20px;opacity:1;}
+  .hist-row.sel{background:var(--accent-soft);border-radius:8px;}
+  .hist-row.trash{gap:8px;}
+  .hist-row .tdays{flex:0 0 auto;font-size:11px;color:var(--ink-3);}
+  .tbtn{flex:0 0 auto;height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);font-size:12px;font-weight:700;color:var(--ink-2);}
+  .tbtn.danger{color:var(--hanja);border-color:var(--hanja-soft);}
+  .quiz-bar{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex:0 0 auto;}
+  .quiz-bar b{font-size:20px;color:var(--accent);}
+  .quiz-bar b.fin{color:var(--english);}
+  .quiz-sub{font-size:12.5px;color:var(--ink-3);}
+  .quiz-list{overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  .quiz-q{padding:13px 0;border-bottom:1px solid var(--line-2);}
+  .quiz-prompt{display:flex;gap:9px;font-size:15px;color:var(--ink);margin-bottom:10px;line-height:1.45;}
+  .quiz-prompt .qnum{flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:700;display:grid;place-items:center;}
+  .quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+  .quiz-opt{min-height:42px;border-radius:10px;border:1px solid var(--line);background:var(--card);font-size:15px;font-weight:600;color:var(--ink);padding:6px 8px;transition:border-color .15s,background .15s;}
+  .quiz-opt.correct{background:var(--english-soft);border-color:var(--english);color:var(--english);}
+  .quiz-opt.wrong{background:var(--hanja-soft);border-color:var(--hanja);color:var(--hanja);}
+  .quiz-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex:0 0 auto;}
+  .hanja-wtop{display:flex;align-items:center;gap:14px;}
+  .hanja-word{font-size:34px;font-weight:700;color:var(--ink);letter-spacing:.04em;}
+  .hanja-wread{flex:1;color:var(--ink-2);font-size:15px;font-weight:600;}
+  /* 손글씨 입력 */
+  .penbtn{flex:0 0 auto;width:44px;height:44px;border-radius:13px;border:1px solid var(--line);background:var(--card);color:var(--accent);display:grid;place-items:center;}
+  .penbtn:active{transform:scale(.95);}
+  .kbdbtn{flex:0 0 auto;width:44px;height:46px;border-radius:13px;border:1.5px solid var(--line);background:var(--card);color:var(--accent);display:grid;place-items:center;}
+  .kbdbtn:active{transform:scale(.95);}
+  .hw-padwrap{position:relative;flex:0 0 auto;}
+  .hw-pad{width:100%;height:230px;border:1.5px dashed var(--line);border-radius:14px;background:var(--card);touch-action:none;display:block;}
+  .hw-ph{color:var(--ink-3);font-size:13px;}
+  .hw-padwrap .hw-ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+  .hw-tools{display:flex;gap:7px;margin-top:10px;flex:0 0 auto;}
+  .hw-tools .sel-btn{flex:1;height:40px;}
+  .hw-cands{display:flex;flex-wrap:wrap;gap:8px;min-height:46px;align-items:center;margin-top:12px;flex:0 0 auto;}
+  .hw-cand{min-width:46px;height:46px;padding:0 8px;border-radius:11px;border:1px solid var(--line);background:var(--card);font-size:24px;color:var(--ink);}
+  .hw-cand:active{background:var(--accent-soft);border-color:var(--accent);}
+  .hw-cand.old{color:var(--ancient);border-color:var(--ancient-soft);background:var(--ancient-soft);font-weight:700;}
+  .hw-cands.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;align-items:stretch;}
+  .hw-cands.grid .hw-cand{width:100%;height:56px;font-size:26px;}
+  /* 선택형 검색 결과 목록 */
+  .reslist-grid{display:grid;grid-template-columns:1fr;gap:9px;}
+  .reslist{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:15px 16px;margin-bottom:0;border:1px solid var(--line);border-radius:14px;background:var(--card);transition:border-color .15s,transform .1s;}
+  .reslist:hover{border-color:var(--accent);}
+  .reslist:active{transform:scale(.99);}
+  .reslist .rl-main{display:flex;align-items:baseline;gap:7px;flex:0 0 auto;}
+  .reslist .rl-head{font-size:19px;font-weight:700;color:var(--ink);}
+  .reslist .rl-sub{flex:1 1 auto;min-width:0;font-size:13px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .reslist .rl-go{flex:0 0 auto;color:var(--ink-3);font-size:16px;}
+  .reslist:hover .rl-go{color:var(--accent);}
+  /* 유의어 */
+  .back-btn{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--ink-2);background:var(--line-2);border-radius:9px;padding:7px 12px;margin-bottom:14px;}
+  .back-btn:hover{color:var(--accent);}
+  .syn-sec{margin-top:18px;padding-top:16px;border-top:1px solid var(--line-2);}
+  .syn-label{font-size:12px;font-weight:700;color:var(--ink-3);letter-spacing:.06em;margin-bottom:11px;}
+  .syn-list{display:flex;flex-wrap:wrap;gap:8px;}
+  .syn-chip{padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-size:14px;font-weight:600;color:var(--accent);transition:background .15s;}
+  .syn-chip:hover{background:var(--accent-soft);}
+  .syn-empty{font-size:13px;color:var(--ink-3);}
+  .hw-bufrow{display:flex;align-items:center;gap:9px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line-2);flex:0 0 auto;}
+  .hw-buflabel{font-size:12px;color:var(--ink-3);flex:0 0 auto;}
+  .hw-buf{flex:1;min-height:30px;font-size:22px;color:var(--ink);letter-spacing:.04em;word-break:break-all;}
+  .hw-bk{flex:0 0 auto;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink-2);font-size:16px;}
+  .anc-badge{margin-top:5px;font-size:12px;font-weight:700;color:var(--ancient);}
+
+  /* 옛한글 자판(중세국어) */
+  .jamo-prevwrap{position:relative;min-height:54px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);display:flex;align-items:center;padding:8px 14px;margin-bottom:8px;flex:0 0 auto;}
+  .jamo-prev{font-family:"Noto Serif KR",serif;font-size:26px;line-height:1.3;letter-spacing:.03em;color:var(--ink);word-break:break-all;}
+  .jamo-ph{position:absolute;left:14px;color:var(--ink-3);font-size:13px;pointer-events:none;}
+  .jamo-hint{font-size:12px;color:var(--ink-3);margin-bottom:6px;line-height:1.5;flex:0 0 auto;}
+  .jamo-hint b{color:var(--ancient);font-weight:700;}
+  .jamo-scroll{overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1 1 auto;min-height:0;}
+  .jamo-sec{font-size:12px;font-weight:700;color:var(--ink-3);letter-spacing:.06em;margin:12px 0 6px;}
+  .jamo-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+  .jkey{height:44px;border-radius:9px;border:1px solid var(--line);background:var(--card);font-family:"Noto Serif KR",serif;font-size:19px;color:var(--ink);}
+  .jkey:active{background:var(--accent-soft);border-color:var(--accent);transform:scale(.96);}
+  .jkey.old{color:var(--ancient);border-color:var(--ancient-soft);background:var(--ancient-soft);font-weight:700;}
+  .jamo-tools{display:flex;gap:7px;margin-top:12px;flex:0 0 auto;}
+  .jamo-tools .sel-btn{flex:1;height:46px;}
+
+  /* 로그인 별도 화면 */
+  #loginScreen{position:absolute;inset:0;z-index:40;background:var(--paper);display:flex;flex-direction:column;
+    padding:max(18px,env(safe-area-inset-top)) 22px max(22px,env(safe-area-inset-bottom));}
+  #loginScreen.hide{display:none;}
+  .login-back{align-self:flex-start;font-size:13px;font-weight:600;color:var(--ink-2);background:var(--line-2);border-radius:9px;padding:8px 13px;margin-top:4px;}
+  .login-back:hover{color:var(--accent);}
+  .login-screen-inner{flex:1 1 auto;display:flex;flex-direction:column;}
+  .login-box{margin:auto;width:100%;max-width:360px;}
+  .login-brand{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;font-weight:700;color:var(--ink-3);letter-spacing:.16em;text-transform:uppercase;margin-bottom:12px;}
+  .login-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);}
+  .login-title{font-size:26px;font-weight:700;text-align:center;margin:0 0 22px;letter-spacing:-.01em;}
+  .login-box .htabs{margin-bottom:14px;}
+  .login-box .auth-in{height:50px;}
+  .login-box .auth-submit{height:50px;margin-top:4px;}
+
+  /* 중앙 모달(아래에서 올라오지 않고 가운데에서 페이드+스케일로 등장) */
+  .modal-back{position:fixed;inset:0;z-index:60;background:rgba(20,18,15,.42);display:none;align-items:center;justify-content:center;padding:22px;}
+  .modal-back.show{display:flex;}
+  .modal-card{width:100%;max-width:340px;background:var(--paper);border-radius:18px;padding:22px 20px;
+    box-shadow:0 24px 64px -20px rgba(0,0,0,.5);animation:modalIn .2s var(--ease);}
+  @keyframes modalIn{from{opacity:0;transform:scale(.93);}to{opacity:1;transform:none;}}
+  .modal-title{font-size:16px;font-weight:700;text-align:center;line-height:1.5;color:var(--ink);}
+  .modal-desc{font-size:13px;color:var(--ink-2);text-align:center;margin-top:9px;line-height:1.65;}
+  .modal-actions{display:flex;gap:9px;margin-top:20px;}
+  .modal-actions button{flex:1;height:46px;border-radius:12px;font-size:14.5px;font-weight:700;transition:transform .12s var(--ease);}
+  .modal-actions button:active{transform:scale(.97);}
+  .modal-btn-cancel{background:var(--line-2);color:var(--ink-2);}
+  .modal-btn-primary{background:var(--accent);color:#fff;}
+
+  /* ===================================================================
+     데스크톱(넓은 화면) 2단 반응형 레이아웃
+       · 모바일(<960px): 지금처럼 단일 컬럼(폰 화면)
+       · 데스크톱(≥960px): 좌측 컨트롤 사이드바 + 우측 결과, 결과 목록은 2열
+     =================================================================== */
+  @media (min-width:960px){
+    .app{max-width:1180px;}
+
+    /* 선택 화면: 세로 가운데 정렬 + 2열 카드 */
+    #picker{justify-content:center;padding:56px 44px;}
+    #picker .pick-head,#picker .pick-list{width:100%;max-width:720px;margin-left:auto;margin-right:auto;}
+    .pick-head{margin-top:0;text-align:center;}
+    .pick-title{font-size:38px;}
+    .pick-list{margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+    /* 메인: 좌측 사이드바(360px) + 우측 결과(가변) */
+    #main{display:grid;grid-template-columns:360px minmax(0,1fr);align-items:start;}
+    .topbar{position:sticky;top:0;height:100dvh;overflow-y:auto;overflow-x:hidden;
+      border-bottom:none;border-right:1px solid var(--line);
+      background:var(--paper);backdrop-filter:none;-webkit-backdrop-filter:none;
+      padding:26px 22px;display:flex;flex-direction:column;}
+    .bar-top{margin-bottom:20px;}
+    .recent{flex-wrap:wrap;overflow:visible;margin-top:14px;}
+
+    .results{padding:30px 34px max(40px,env(safe-area-inset-bottom));}
+    #dresults{max-width:900px;}
+
+    /* 검색 결과 목록: 2열 */
+    .reslist-grid{grid-template-columns:1fr 1fr;gap:12px;}
+
+    /* 하단 시트 → 화면 중앙 모달 */
+    .sheet-back{align-items:center;}
+    .sheet{max-width:470px;border-radius:20px;max-height:88vh;}
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- 선택 화면 -->
+  <section id="picker">
+    <button class="pick-login" id="pickLoginBtn" type="button"><span class="pl-ic">👤</span><span class="pl-nm">로그인</span></button>
+    <div class="pick-head">
+      <div class="pick-eyebrow">사전</div>
+      <h1 class="pick-title">무엇으로<br><b>시작할까요?</b></h1>
+    </div>
+    <div class="pick-list" id="pickList">
+      <button class="pick-card" data-dict="korean" style="--c:var(--korean);--cs:var(--korean-soft)">
+        <span class="pick-glyph serif">가</span>
+        <span class="pick-meta"><span class="pick-name">국어사전</span></span>
+        <span class="pick-arrow">→</span>
+      </button>
+      <button class="pick-card" data-dict="english" style="--c:var(--english);--cs:var(--english-soft)">
+        <span class="pick-glyph serif">A</span>
+        <span class="pick-meta"><span class="pick-name">영어사전 <span class="en">English</span></span></span>
+        <span class="pick-arrow">→</span>
+      </button>
+      <button class="pick-card" data-dict="hanja" style="--c:var(--hanja);--cs:var(--hanja-soft)">
+        <span class="pick-glyph serif">漢</span>
+        <span class="pick-meta"><span class="pick-name">한자사전 <span class="en">漢字</span></span></span>
+        <span class="pick-arrow">→</span>
+      </button>
+      <button class="pick-card" data-dict="ancient" style="--c:var(--ancient);--cs:var(--ancient-soft)">
+        <span class="pick-glyph serif">ᄒᆞ</span>
+        <span class="pick-meta"><span class="pick-name">중세국어</span></span>
+        <span class="pick-arrow">→</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- 메인 -->
+  <section id="main" class="hide">
+    <header class="topbar">
+      <div class="bar-top">
+        <div class="bar-title"><span class="dot"></span><span id="barName">국어사전</span></div>
+        <div class="bar-actions">
+          <button class="acct-btn" id="acctBtn" hidden></button>
+          <button class="seg" id="histBtn" style="background:none;color:var(--ink-3);font-weight:600;font-size:13px;padding:4px 6px;">검색기록</button>
+          <button class="seg" id="backToPick" style="background:none;color:var(--ink-3);font-weight:600;font-size:13px;padding:4px 6px;">처음으로</button>
+        </div>
+      </div>
+
+      <div class="switcher" role="tablist" aria-label="모드 선택">
+        <button class="seg" role="tab" data-dict="korean"    aria-selected="true">국어</button>
+        <button class="seg" role="tab" data-dict="english"   aria-selected="false">영어</button>
+        <button class="seg" role="tab" data-dict="hanja"     aria-selected="false">漢字</button>
+        <button class="seg" role="tab" data-dict="ancient"   aria-selected="false">중세</button>
+      </div>
+
+      <div class="searchrow" id="searchrow">
+        <button class="kbdbtn" id="kbdBtn" type="button" hidden aria-label="옛한글 자판" title="옛한글 자판(아래아 등)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M10 13h.01M14 13h.01M18 13h.01M8 16.5h8"/></svg></button>
+        <label class="field">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="q" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="낱말을 검색하세요" aria-label="검색어" />
+          <button class="clearbtn" id="clear" aria-label="지우기"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        </label>
+        <button class="penbtn" id="penBtn" type="button" aria-label="손글씨 입력" title="손글씨 입력"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg></button>
+        <button class="gobtn" id="go">검색</button>
+      </div>
+
+      <div class="hanmodes" id="hanModes" hidden>
+        <button class="hanmode on" data-hanmode="eum">음</button>
+        <button class="hanmode" data-hanmode="hun">뜻</button>
+      </div>
+
+      <div class="recent" id="recent" aria-label="최근 검색"></div>
+    </header>
+
+    <main class="results">
+      <!-- 사전 결과 -->
+      <div id="dresults"></div>
+    </main>
+  </section>
+  <!-- 로그인 / 회원가입 (별도 전체 화면) -->
+  <section id="loginScreen" class="hide">
+    <button class="login-back" id="loginBack" type="button">← 돌아가기</button>
+    <div class="login-screen-inner">
+      <div class="login-box">
+        <div class="login-brand"><span class="login-dot"></span> 사전</div>
+        <h2 class="login-title" id="loginTitle">로그인</h2>
+        <div class="htabs" id="loginTabs"></div>
+        <input class="auth-in" id="authUser" type="text" autocomplete="username" autocapitalize="off" placeholder="아이디 (2~20자)" />
+        <input class="auth-in" id="authPw" type="password" autocomplete="current-password" placeholder="비밀번호 (6자 이상)" />
+        <input class="auth-in" id="authPw2" type="password" autocomplete="new-password" placeholder="비밀번호 확인 (한 번 더)" hidden />
+        <div class="auth-msg" id="authMsg"></div>
+        <button class="auth-submit" id="authSubmitBtn">로그인</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 중앙 모달(로그인 안내 등) -->
+  <div class="modal-back" id="promptBack"><div class="modal-card" id="promptCard"></div></div>
+
+  <div class="sheet-back" id="sheetBack"><div class="sheet" id="sheet"></div></div>
+</div>
+
+<script>
+/* =====================================================================
+   설정 — 본인 백엔드 프록시 주소. 비우면 내장 샘플로 동작.
+     사전 : GET {API_BASE}/search?dict=korean|english|hanja|ancient&query=단어
+            -> { "results":[ <entry> ] }   (entry 모양은 SAMPLE 참고)
+   ===================================================================== */
+const API_BASE = "";           // 같은 서버가 서빙하면 빈 값(상대경로). 별도 호스팅이면 API 주소.
+let BACKEND = false;           // 서버 연결 여부(미연결 시 데모)
+let ME = null;                 // 로그인 사용자
+let authMode = "login";        // 로그인 시트 모드: login | register
+
+const LABEL = {
+  korean:   {name:"국어사전", sub:"KOREAN",    ph:"낱말을 검색하세요"},
+  english:  {name:"영어사전", sub:"ENGLISH",   ph:"Search an English word"},
+  hanja:    {name:"한자사전", sub:"HANJA",     ph:"한자 또는 낱말 검색"},
+  ancient:  {name:"중세국어", sub:"MIDDLE KOREAN", ph:"옛말을 검색하세요"},
+};
+const GLYPH = {korean:"가",english:"A",hanja:"漢",ancient:"ᄒᆞ"};
+const ACCENT = {
+  korean:["#2E4C8A","rgba(46,76,138,.10)"], english:["#237A66","rgba(35,122,102,.10)"],
+  hanja:["#BC3B2E","rgba(188,59,46,.10)"],
+  ancient:["#8A6D3B","rgba(138,109,59,.12)"],
+};
+
+/* 내장 사전 샘플 */
+const SAMPLE = {
+  korean:{
+    "사전":{headword:"사전",origin:"辭典",senses:[{pos:"명사",defs:["어떤 범위 안에서 쓰이는 낱말을 모아 일정한 순서로 배열하여 싣고, 그 발음·뜻·어원·용법 따위를 해설한 책."],examples:[{text:"국어사전을 찾아 단어의 뜻을 확인했다."}]}]},
+    "사랑":{headword:"사랑",senses:[{pos:"명사",defs:["어떤 사람이나 존재를 몹시 아끼고 귀중히 여기는 마음. 또는 그런 일.","어떤 사물이나 대상을 아끼고 소중히 여기거나 즐기는 마음.","남을 이해하고 돕는 마음. 또는 그런 일."],examples:[{text:"부모님의 사랑은 끝이 없다."},{text:"그는 음악에 대한 사랑이 깊다."}]}]},
+    "바람":{headword:"바람",senses:[{pos:"명사",defs:["기압의 변화 또는 사람이나 기계에 의하여 일어나는 공기의 움직임.","사회적으로 일어나는 일시적인 유행이나 분위기."],examples:[{text:"창문으로 시원한 바람이 들어온다."},{text:"학교에 봉사 활동 바람이 불었다."}]}]},
+  },
+  english:{
+    "love":{headword:"love",phon:"[lʌv]",speak:"love",lang:"en-US",senses:[{pos:"noun",defs:["사랑, 애정","연애, 사랑하는 사람"],examples:[{text:"They fell in love.",trans:"그들은 사랑에 빠졌다."}]},{pos:"verb",defs:["~을 사랑하다, 아주 좋아하다"],examples:[{text:"I love this song.",trans:"나는 이 노래를 정말 좋아한다."}]}]},
+    "run":{headword:"run",phon:"[rʌn]",speak:"run",lang:"en-US",senses:[{pos:"verb",defs:["달리다, 뛰다","(기계 등이) 작동하다, 돌아가다","운영하다, 경영하다"],examples:[{text:"She runs every morning.",trans:"그녀는 매일 아침 달린다."}]},{pos:"noun",defs:["달리기, 뜀","연속, 연이은 기간"],examples:[]}]},
+    "dictionary":{headword:"dictionary",phon:"[ˈdɪkʃəneri]",speak:"dictionary",lang:"en-US",senses:[{pos:"noun",defs:["사전, 사전류","어휘집, 용어집"],examples:[{text:"Look it up in the dictionary.",trans:"사전에서 그것을 찾아봐라."}]}]},
+  },
+  hanja:{
+    "愛情":{kind:"word",word:"애정",origin:"愛情",pos:"명사",defs:["사랑하는 마음. 또는 그런 정."],chars:[{char:"愛",read:"사랑 애"},{char:"情",read:"뜻 정"}]},
+    "애정":{kind:"word",word:"애정",origin:"愛情",pos:"명사",defs:["사랑하는 마음. 또는 그런 정."],chars:[{char:"愛",read:"사랑 애"},{char:"情",read:"뜻 정"}]},
+    "愛":{char:"愛",read:"사랑 애",radical:"心 (마음심)",strokes:13,grade:"중학용",defs:["사랑, 사랑하다","아끼다, 소중히 여기다","사모하다, 그리워하다"],words:[{w:"愛情",k:"애정"},{w:"愛人",k:"애인"},{w:"友愛",k:"우애"},{w:"愛國",k:"애국"}]},
+    "水":{char:"水",read:"물 수",radical:"水 (물수)",strokes:4,grade:"8급",defs:["물","강, 하천","액체"],words:[{w:"水道",k:"수도"},{w:"生水",k:"생수"},{w:"洪水",k:"홍수"},{w:"水分",k:"수분"}]},
+    "漢":{char:"漢",read:"한수/한나라 한",radical:"水 (氵, 삼수변)",strokes:14,grade:"7급",defs:["한나라","한수(강 이름)","사나이, 사내"],words:[{w:"漢字",k:"한자"},{w:"漢江",k:"한강"},{w:"惡漢",k:"악한"},{w:"門外漢",k:"문외한"}]},
+    "字":{char:"字",read:"글자 자",radical:"子 (아들자)",strokes:6,grade:"7급",defs:["글자, 문자","글씨","낳다, 기르다"],words:[{w:"文字",k:"문자"},{w:"漢字",k:"한자"},{w:"字典",k:"자전"},{w:"赤字",k:"적자"}]},
+  },
+  ancient:{
+    "마음":{headword:"ᄆᆞᅀᆞᆷ",senses:[{pos:"명사",defs:["‘마음’의 옛말."],examples:[]}]},
+    "ᄆᆞᅀᆞᆷ":{headword:"ᄆᆞᅀᆞᆷ",senses:[{pos:"명사",defs:["‘마음’의 옛말."],examples:[]}]},
+    "나라":{headword:"나라ㅎ",senses:[{pos:"명사",defs:["‘나라’의 옛말. 받침 ㅎ을 가진 ㅎ종성체언이다."],examples:[]}]},
+    "어리다":{headword:"어리다",senses:[{pos:"형용사",defs:["‘어리석다’의 옛말. 중세국어에서 ‘어리다’는 ‘나이가 적다’가 아니라 ‘어리석다’를 뜻하였다."],examples:[]}]},
+  },
+};
+
+
+/* 상태 */
+let dict="korean";
+let hanjaMode="eum";          // 한자사전: 음(eum) / 뜻(hun)
+const recent={korean:[],english:[],hanja:[],ancient:[]};
+
+/* 요소 */
+const $=s=>document.querySelector(s);
+const picker=$("#picker"),main=$("#main"),dresults=$("#dresults");
+const input=$("#q"),clearBtn=$("#clear"),recentBox=$("#recent"),searchrow=$("#searchrow"),hanModes=$("#hanModes");
+const barName=$("#barName");
+
+/* ---------- 데이터 (한 곳에 격리) ---------- */
+async function fetchEntries(d,query){
+  const q=query.trim(); if(!q) return [];
+  if(BACKEND){
+    const extra = d==="hanja" ? `&mode=${encodeURIComponent(hanjaMode)}` : "";
+    const r=await fetch(`${API_BASE}/search?dict=${encodeURIComponent(d)}&query=${encodeURIComponent(q)}${extra}`,{credentials:"include"});
+    if(!r.ok) throw new Error("API "+r.status); return (await r.json()).results||[];
+  }
+  const lib=SAMPLE[d],key=q.toLowerCase(),hits=[];
+  for(const k in lib){const e=lib[k];
+    const hay=(k+" "+(e.read||"")+" "+(e.headword||"")+(e.words?" "+e.words.map(w=>w.w+w.k).join(" "):"")).toLowerCase();
+    if(k.toLowerCase()===key||hay.includes(key)) hits.push(e);}
+  await new Promise(r=>setTimeout(r,160)); return hits;
+}
+
+/* ---------- 렌더 ---------- */
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function renderKorean(e){return `<article class="entry"><div class="entry-head"><div><div class="headword serif">${esc(e.headword)}${e.origin?`<span class="origin">${esc(e.origin)}</span>`:""}</div></div></div>${e.senses.map(s=>`<div class="pos">${esc(s.pos)}</div>${s.defs.map((d,i)=>`<div class="sense"><span class="num">${i+1}</span><span class="def">${esc(d)}</span></div>`).join("")}${(s.examples||[]).map(x=>`<div class="ex">${esc(x.text)}</div>`).join("")}`).join("")}</article>`;}
+function renderEnglish(e){return `<article class="entry"><div class="entry-head"><div><div class="headword serif">${esc(e.headword)}</div>${e.phon?`<div class="phon">${esc(e.phon)}</div>`:""}</div></div>${e.senses.map(s=>`<div class="pos">${esc(s.pos)}</div>${s.defs.map((d,i)=>`<div class="sense"><span class="num">${i+1}</span><span class="def">${esc(d)}</span></div>`).join("")}${(s.examples||[]).map(x=>`<div class="ex">${esc(x.text)}${x.trans?`<span class="trans">${esc(x.trans)}</span>`:""}</div>`).join("")}`).join("")}</article>`;}
+function renderHanja(e){ return e.kind==="browse"?renderHanjaBrowse(e):e.kind==="word"?renderHanjaWord(e):renderHanjaChar(e); }
+function renderHanjaBrowse(e){
+  const label = e.mode==="hun" ? `뜻이 '${esc(e.query)}'인 한자` : `음이 '${esc(e.query)}'인 한자`;
+  if(!e.chars||!e.chars.length) return `<div class="state"><div class="state-glyph serif">漢</div><div class="state-title">${label}를 찾지 못했어요</div></div>`;
+  return `<div class="browse-head">${label}<span class="browse-n">${e.chars.length}자</span></div><div class="browse-grid">${e.chars.map(c=>`<button class="browse-ch" data-find="${esc(c.char)}"><span class="bc serif">${esc(c.char)}</span><span class="br">${esc(c.read)}</span></button>`).join("")}</div>`;
+}
+function renderHanjaWord(e){return `<article class="entry"><div class="hanja-wtop"><div class="hanja-word serif">${esc(e.origin||e.word)}</div><div class="hanja-wread">${esc(e.word)}${e.pos?` · ${esc(e.pos)}`:""}</div></div><div class="divider"></div>${(e.defs&&e.defs.length)?`<div class="sec-label">뜻</div>${e.defs.map((d,i)=>`<div class="sense"><span class="num">${i+1}</span><span class="def">${esc(d)}</span></div>`).join("")}`:`<div class="hist-empty">뜻풀이를 찾지 못했어요.</div>`}${(e.chars&&e.chars.length)?`<div class="sec-label" style="margin-top:14px">글자</div><div class="word-list">${e.chars.map(c=>`<button class="word" data-find="${esc(c.char)}"><span class="serif">${esc(c.char)}</span><span class="ko">${esc(c.read)}</span></button>`).join("")}</div>`:""}</article>`;}
+function renderHanjaChar(e){return `<article class="entry"><div class="hanja-top"><div class="hanja-char serif">${esc(e.char)}</div><div><div class="hanja-read serif">${esc(e.read)}</div><div class="hanja-meta"><span class="tag">부수 <b>${esc(e.radical)}</b></span><span class="tag">총획 <b>${esc(e.strokes)}획</b></span>${e.grade?`<span class="tag">${esc(e.grade)}</span>`:""}</div></div></div><div class="divider"></div><div class="sec-label">뜻</div>${e.defs.map((d,i)=>`<div class="sense"><span class="num">${i+1}</span><span class="def">${esc(d)}</span></div>`).join("")}${e.words&&e.words.length?`<div class="sec-label" style="margin-top:14px">활용 어휘</div><div class="word-list">${e.words.map(w=>`<button class="word" data-find="${esc(w.k)}"><span class="serif">${esc(w.w)}</span><span class="ko">${esc(w.k)}</span></button>`).join("")}</div>`:""}</article>`;}
+function renderAncient(e){return `<article class="entry"><div class="entry-head"><div><div class="headword serif">${esc(e.headword)}${e.origin?`<span class="origin">${esc(e.origin)}</span>`:""}</div><div class="anc-badge">옛말 · 중세국어</div></div></div>${e.senses.map(s=>`<div class="pos">${esc(s.pos)}</div>${s.defs.map((d,i)=>`<div class="sense"><span class="num">${i+1}</span><span class="def">${esc(d)}</span></div>`).join("")}${(s.examples||[]).map(x=>`<div class="ex">${esc(x.text)}</div>`).join("")}`).join("")}</article>`;}
+const RENDER={korean:renderKorean,english:renderEnglish,hanja:renderHanja,ancient:renderAncient};
+
+/* 상태 화면 */
+function showEmpty(){const g=GLYPH[dict];results_html(`<div class="state"><div class="state-glyph serif">${g}</div><div class="state-title">${LABEL[dict].name}</div></div>`);}
+function showLoading(){results_html(`<div class="state"><div class="spinner"></div></div>`);}
+function showError(){results_html(`<div class="state"><div class="state-glyph serif">!</div><div class="state-title">불러오지 못했어요</div><div class="state-desc">잠시 후 다시 시도해 주세요.</div></div>`);}
+function showNoResult(q){const note=API_BASE?"":`<div class="note">지금은 내장 샘플로 동작 중이에요. 실제 사전을 연결하려면 코드 상단 <code>API_BASE</code>에 백엔드 주소를 넣으세요.</div>`;results_html(`<div class="state"><div class="state-glyph serif">∅</div><div class="state-title">'${esc(q)}' 결과가 없어요</div><div class="state-desc">철자를 확인하거나 다른 낱말로 검색해 보세요.</div>${note}</div>`);}
+function results_html(h){dresults.innerHTML=h;}
+
+/* 검색 */
+let reqId=0;
+let lastResults=[], lastSelDict="";
+async function doSearch(query){
+  const q=(query??input.value).trim(); input.value=q; toggleClear();
+  if(!q){showEmpty(); hanModes.hidden=(dict!=="hanja"); return;}
+  const my=++reqId; showLoading();
+  try{const entries=await fetchEntries(dict,q);
+    if(my!==reqId)return;
+    hanModes.hidden=(dict!=="hanja"); if(dict==="hanja") syncHanModes();
+    if(!entries.length){showNoResult(q);return;}
+    addRecent(q);
+    if(dict==="hanja"){
+      results_html(entries.map(e=>RENDER.hanja(e)).join(""));
+      saveHistory("hanja", q);                       // 한자: 검색 시 기록 저장
+    }else{
+      lastResults=entries; lastSelDict=dict;          // 국어·영어·중세: 선택형 목록
+      renderResultsList(entries);
+    }
+  }catch(e){if(my===reqId)showError();}
+}
+function saveHistory(d,q){ if(BACKEND&&ME&&q){ fetch(`${API_BASE}/api/history`,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify({dict:d,query:q})}).catch(()=>{}); } }
+const snip=e=>(e.senses&&e.senses[0]&&e.senses[0].defs&&e.senses[0].defs[0])||"";
+function renderResultsList(entries){
+  results_html(`<div class="reslist-grid">`+entries.map((e,i)=>{
+    const origin=e.origin?`<span class="origin">${esc(e.origin)}</span>`:"";
+    const sub=snip(e);
+    return `<button class="reslist" data-select="${i}"><span class="rl-main"><span class="rl-head serif">${esc(e.headword||"")}</span>${origin}</span>${sub?`<span class="rl-sub">${esc(sub)}</span>`:""}<span class="rl-go">→</span></button>`;
+  }).join("")+`</div>`);
+}
+async function selectEntry(i){
+  const e=lastResults[i]; if(!e)return;
+  const head=e.headword||input.value.trim();
+  saveHistory(lastSelDict, head);                     // 선택 시에만 기록 저장
+  results_html(`<button class="back-btn" data-back="1">← 검색 결과</button>${RENDER[lastSelDict](e)}<div class="syn-sec"><div class="syn-label">유의어</div><div class="syn-list" id="synList"><span class="syn-empty">불러오는 중…</span></div></div>`);
+  let syn=[];
+  if(BACKEND){ try{ const r=await fetch(`${API_BASE}/synonyms?dict=${encodeURIComponent(lastSelDict)}&word=${encodeURIComponent(head)}`,{credentials:"include"}); syn=(await r.json()).synonyms||[]; }catch{} }
+  const sl=document.getElementById("synList"); if(!sl)return;
+  sl.innerHTML = syn.length ? syn.slice(0,10).map(w=>`<button class="syn-chip" data-find="${esc(w)}">${esc(w)}</button>`).join("") : `<span class="syn-empty">유의어 정보가 없어요.</span>`;
+}
+function syncHanModes(){ hanModes.querySelectorAll(".hanmode").forEach(b=>b.classList.toggle("on",b.dataset.hanmode===hanjaMode)); }
+hanModes.addEventListener("click",e=>{
+  const b=e.target.closest(".hanmode"); if(!b)return;
+  if(hanjaMode!==b.dataset.hanmode){ hanjaMode=b.dataset.hanmode; syncHanModes(); if(input.value.trim())doSearch(input.value.trim()); }
+});
+
+/* 최근 검색 */
+function addRecent(q){ if(!ME)return; const a=recent[dict];const i=a.indexOf(q);if(i>-1)a.splice(i,1);a.unshift(q);if(a.length>8)a.pop();renderRecent();}   // 로그인 상태에서만 최근검색 기록
+function renderRecent(){recentBox.innerHTML=(recent[dict]||[]).map(q=>`<button class="chip" data-find="${esc(q)}">${esc(q)}</button>`).join("");}
+
+/* 모드 전환 */
+function setMode(d,{clear=false}={}){
+  dict=d;
+  document.documentElement.style.setProperty("--accent",ACCENT[d][0]);
+  document.documentElement.style.setProperty("--accent-soft",ACCENT[d][1]);
+  barName.textContent=LABEL[d].name;
+  document.querySelectorAll(".switcher .seg").forEach(b=>b.setAttribute("aria-selected",b.dataset.dict===d?"true":"false"));
+  document.getElementById("penBtn").style.display=(d==="hanja"||d==="ancient")?"grid":"none";   // 손글씨: 한자·중세
+  document.getElementById("kbdBtn").hidden=(d!=="ancient");                                      // 옛한글 자판: 중세국어만
+  hanModes.hidden=(d!=="hanja"); if(d==="hanja") syncHanModes();                                 // 음/뜻: 한자사전에서 항상 표시
+  input.placeholder=LABEL[d].ph;
+  if(clear){input.value="";toggleClear();}
+  renderRecent();
+  if(input.value.trim())doSearch(); else showEmpty();
+}
+function toggleClear(){clearBtn.classList.toggle("show",!!input.value);}
+
+/* 첫 실행 */
+function enterApp(d){picker.classList.add("hide");main.classList.remove("hide");setMode(d,{clear:true});input.focus({preventScroll:true});}
+
+/* 이벤트 */
+$("#pickList").addEventListener("click",e=>{const c=e.target.closest(".pick-card");if(c)enterApp(c.dataset.dict);});
+$("#backToPick").addEventListener("click",()=>{main.classList.add("hide");picker.classList.remove("hide");});
+document.querySelector(".switcher").addEventListener("click",e=>{const s=e.target.closest(".seg");if(s)setMode(s.dataset.dict);});
+$("#go").addEventListener("click",()=>doSearch());
+input.addEventListener("keydown",e=>{if(e.key==="Enter")doSearch();});
+input.addEventListener("input",toggleClear);
+clearBtn.addEventListener("click",()=>{input.value="";toggleClear();input.focus();showEmpty();});
+
+/* 위임: 검색 칩, 복사, 듣기 */
+document.addEventListener("click",e=>{
+  const sel=e.target.closest("[data-select]"); if(sel){ selectEntry(Number(sel.dataset.select)); return; }
+  const bk=e.target.closest("[data-back]"); if(bk){ renderResultsList(lastResults); return; }
+  const find=e.target.closest("[data-find]"); if(find){doSearch(find.dataset.find);return;}
+});
+/* ---------- 로그인 · 검색 기록 ---------- */
+const DLABEL={korean:"국어",english:"영어",hanja:"漢字",ancient:"중세"};
+let histDict="korean", histItems=[], histSel=new Set(), histSelMode=false, histView="list";
+const acctBtn=$("#acctBtn"),sheetBack=$("#sheetBack"),sheet=$("#sheet");
+const loginScreen=$("#loginScreen"),promptBack=$("#promptBack"),promptCard=$("#promptCard");
+let loginPrev="main";   // 로그인 화면 진입 직전 화면(로그인 후 복귀)
+
+async function initBackend(){
+  try{
+    const r=await fetch(API_BASE+"/api/me",{credentials:"include"});
+    if(r.ok){ BACKEND=true; const j=await r.json(); ME=j.user; }
+  }catch{ BACKEND=false; }
+  renderAccount();
+}
+function renderAccount(){
+  acctBtn.hidden=false;
+  const plnm=$("#pickLoginBtn")?.querySelector(".pl-nm");
+  if(ME){
+    const ini=(ME.name||"?").trim().charAt(0)||"?";
+    const av=ME.picture?`<img src="${esc(ME.picture)}" alt="" referrerpolicy="no-referrer">`:esc(ini);
+    acctBtn.innerHTML=`<span class="av">${av}</span><span class="nm">${esc(ME.name||"내 계정")}</span>`;
+    if(plnm)plnm.textContent=ME.name||"내 계정";
+  }else{ acctBtn.innerHTML=`<span class="nm">로그인</span>`; if(plnm)plnm.textContent="로그인"; }
+}
+function openSheet(html){ sheet.innerHTML=html; sheetBack.classList.add("show"); }
+function closeSheet(){ sheetBack.classList.remove("show"); }
+const hHead=t=>`<div class="sheet-h"><b>${t}</b><button class="sheet-x" data-act="close">✕</button></div>`;
+
+/* 중앙 모달(로그인 안내 등) */
+function openPrompt(html){ promptCard.innerHTML=html; promptBack.classList.add("show"); }
+function closePrompt(){ promptBack.classList.remove("show"); }
+function loginPromptModal(){
+  openPrompt(`<div class="modal-title">로그인 후 이용할 수 있어요</div>`
+    +`<div class="modal-desc">검색 기록은 로그인해야 확인할 수 있어요.<br>로그인 화면으로 이동할까요?</div>`
+    +`<div class="modal-actions"><button class="modal-btn-primary" data-prompt="gologin">로그인 화면으로</button><button class="modal-btn-cancel" data-prompt="cancel">취소</button></div>`);
+}
+
+/* 로그인 / 회원가입 — 별도 전체 화면 */
+function renderLoginScreen(){
+  const title=$("#loginTitle"); if(title)title.textContent=authMode==="login"?"로그인":"회원가입";
+  const tabs=$("#loginTabs");
+  if(tabs)tabs.innerHTML=["login","register"].map(m=>`<button class="htab${authMode===m?' on':''}" data-authmode="${m}" style="--c:var(--accent)">${m==="login"?"로그인":"회원가입"}</button>`).join("");
+  const pw=$("#authPw"); if(pw)pw.setAttribute("autocomplete",authMode==="login"?"current-password":"new-password");
+  const pw2=$("#authPw2"); if(pw2){ pw2.hidden=(authMode!=="register"); if(pw2.hidden)pw2.value=""; }   // 회원가입일 때만 비번 확인칸
+  const sub=$("#authSubmitBtn"); if(sub)sub.textContent=authMode==="login"?"로그인":"가입하고 시작하기";
+  const msg=$("#authMsg"); if(msg)msg.textContent="";
+}
+function showLogin(mode){
+  authMode=mode||"login";
+  loginPrev=main.classList.contains("hide")?"picker":"main";
+  closeSheet(); closePrompt();
+  picker.classList.add("hide"); main.classList.add("hide"); loginScreen.classList.remove("hide");
+  renderLoginScreen();
+  setTimeout(()=>{ const u=$("#authUser"); if(u){u.value="";u.focus({preventScroll:true});} const pw=$("#authPw"); if(pw)pw.value=""; },50);
+}
+function hideLogin(){
+  loginScreen.classList.add("hide");
+  if(loginPrev==="picker") picker.classList.remove("hide"); else main.classList.remove("hide");
+}
+async function authSubmit(){
+  const username=($("#authUser")?.value||"").trim();
+  const password=$("#authPw")?.value||"";
+  const msg=$("#authMsg");
+  if(!username||!password){ if(msg)msg.textContent="아이디와 비밀번호를 입력하세요."; return; }
+  if(authMode==="register"){
+    if(password.length<6){ if(msg)msg.textContent="비밀번호는 6자 이상으로 입력하세요."; return; }
+    const pw2=$("#authPw2")?.value||"";
+    if(!pw2){ if(msg)msg.textContent="비밀번호 확인을 입력하세요."; return; }
+    if(password!==pw2){ if(msg)msg.textContent="비밀번호가 일치하지 않습니다."; return; }
+  }
+  if(msg)msg.textContent="";
+  try{
+    const r=await fetch(`${API_BASE}/auth/${authMode}`,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify({username,password})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok){ if(msg)msg.textContent=j.message||"실패했어요. 다시 시도해 주세요."; return; }
+    ME=j.user; renderAccount(); hideLogin();
+  }catch{ if(msg)msg.textContent="서버에 연결하지 못했어요."; }
+}
+function accountSheet(){
+  openSheet(hHead(ME.name||"내 계정")
+    +`<button class="menu-item" data-act="history">🕘 검색 기록</button>`
+    +`<button class="menu-item danger" data-act="logout">로그아웃</button>`);
+}
+function htabsHTML(){
+  return `<div class="htabs">`+["korean","english","hanja","ancient"].map(d=>`<button class="htab${d===histDict?' on':''}" data-tab="${d}" style="--c:var(--${d})">${DLABEL[d]}</button>`).join("")+`</div>`;
+}
+function actBarHTML(){
+  if(histView==="trash") return `<div class="hist-sub"><button class="link-btn" data-act="backlist">← 기록으로</button><button class="link-btn danger" data-act="emptytrash">휴지통 비우기</button></div>`;
+  if(histSelMode) return `<div class="sel-bar"><span class="sel-n">${histSel.size}개 선택</span><button class="sel-btn" data-act="trash">🗑 휴지통</button><button class="sel-btn primary" data-act="quiz">📝 퀴즈</button><button class="sel-btn" data-act="cancelsel">취소</button></div>`;
+  return `<div class="hist-sub"><span class="hist-hint">길게 눌러 선택 · 탭하면 검색</span><button class="link-btn" data-act="trashview">🗑 휴지통</button></div>`;
+}
+function renderHistorySheet(){
+  openSheet(hHead("검색 기록")+htabsHTML()+`<div id="histAct">${actBarHTML()}</div><div id="histBody" class="hist-list"><div class="hist-empty">불러오는 중…</div></div>`);
+  histView==="trash"?fillTrash():fillList();
+}
+function refreshAct(){ const a=sheet.querySelector("#histAct"); if(a)a.innerHTML=actBarHTML(); }
+function rowHTML(it){ const sel=histSel.has(it.id);
+  return `<div class="hist-row${histSelMode?' selectable':''}${sel?' sel':''}" data-id="${it.id}" data-q="${esc(it.query)}"><span class="hck">${sel?'✓':''}</span><span class="hq">${esc(it.query)}</span></div>`;
+}
+function paintRow(id){ const row=sheet.querySelector(`.hist-row[data-id="${id}"]`); if(!row)return; const sel=histSel.has(id);
+  row.classList.toggle("sel",sel); row.classList.toggle("selectable",histSelMode); const ck=row.querySelector(".hck"); if(ck)ck.textContent=sel?"✓":""; }
+function paintAllRows(){ histItems.forEach(it=>paintRow(it.id)); }
+async function fillList(){
+  const box=sheet.querySelector("#histBody"); if(!box)return;
+  try{ const r=await fetch(`${API_BASE}/api/history?dict=${histDict}`,{credentials:"include"}); histItems=(await r.json()).items||[]; }catch{ histItems=[]; }
+  if(!sheet.querySelector("#histBody"))return;
+  if(!histItems.length){ box.innerHTML=`<div class="hist-empty">아직 '${DLABEL[histDict]}' 검색 기록이 없어요.</div>`; return; }
+  box.innerHTML=histItems.map(rowHTML).join(""); bindLongpress(box);
+}
+async function fillTrash(){
+  const box=sheet.querySelector("#histBody"); if(!box)return;
+  let items=[]; try{ const r=await fetch(`${API_BASE}/api/history/trash?dict=${histDict}`,{credentials:"include"}); items=(await r.json()).items||[]; }catch{}
+  if(!sheet.querySelector("#histBody"))return;
+  box.innerHTML=items.length?items.map(it=>{
+    const left=Math.max(0,30-Math.floor((Date.now()-it.ts)/864e5));
+    return `<div class="hist-row trash"><span class="hq">${esc(it.query)}</span><span class="tdays">${left}일 후 삭제</span><button class="tbtn" data-restore="${it.id}">복원</button><button class="tbtn danger" data-del="${it.id}">삭제</button></div>`;
+  }).join(""):`<div class="hist-empty">휴지통이 비어 있어요.</div>`;
+}
+function bindLongpress(box){
+  let timer=null,fired=false,moved=false,sx=0,sy=0;
+  box.onpointerdown=e=>{ const row=e.target.closest(".hist-row"); if(!row)return; fired=false;moved=false;sx=e.clientX;sy=e.clientY; const id=Number(row.dataset.id);
+    clearTimeout(timer); timer=setTimeout(()=>{ fired=true; if(!histSelMode)histSelMode=true; histSel.add(id); paintAllRows(); refreshAct(); if(navigator.vibrate)navigator.vibrate(12); },470); };
+  box.onpointermove=e=>{ if(timer&&Math.hypot(e.clientX-sx,e.clientY-sy)>10){moved=true;clearTimeout(timer);timer=null;} };
+  box.onpointerup=e=>{ clearTimeout(timer); const row=e.target.closest(".hist-row"); if(!row)return;
+    if(fired){fired=false;return;} if(moved){moved=false;return;}
+    const id=Number(row.dataset.id), q=row.dataset.q;
+    if(histSelMode){ if(histSel.has(id))histSel.delete(id); else histSel.add(id); if(!histSel.size){histSelMode=false;paintAllRows();}else paintRow(id); refreshAct(); }
+    else { closeSheet(); setMode(histDict); doSearch(q); } };
+  box.onpointercancel=()=>clearTimeout(timer);
+  box.onpointerleave=()=>clearTimeout(timer);
+}
+async function moveSelToTrash(){ const ids=[...histSel]; if(!ids.length)return;
+  try{ await fetch(`${API_BASE}/api/history/trash`,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify({ids})}); }catch{}
+  histSelMode=false; histSel.clear(); renderHistorySheet(); }
+async function emptyTrash(){ if(!confirm("휴지통을 비우면 복원할 수 없어요. 계속할까요?"))return;
+  try{ await fetch(`${API_BASE}/api/history/trash?dict=${histDict}`,{method:"DELETE",credentials:"include"}); }catch{} fillTrash(); }
+async function makeQuiz(){
+  const items=histItems.filter(it=>histSel.has(it.id)).map(it=>it.query);
+  if(items.length<4){ alert(`단어가 4개 이상일 때만 퀴즈를 만들 수 있어요. (현재 ${items.length}개 선택)`); return; }
+  let data; try{
+    const r=await fetch(`${API_BASE}/api/quiz`,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify({dict:histDict,items})});
+    data=await r.json(); if(!r.ok){ alert(data.message||"퀴즈를 만들 수 없어요."); return; }
+  }catch{ alert("퀴즈를 만들 수 없어요."); return; }
+  histSelMode=false; histSel.clear(); quizSheet(data);
+}
+function quizSheet(data){
+  const qs=data.questions; let answered=0,correct=0;
+  openSheet(hHead(`퀴즈 · ${DLABEL[data.dict]}`)
+    +`<div class="quiz-bar"><b id="quizScore">0 / ${qs.length}</b><span class="quiz-sub">뜻에 맞는 어휘를 고르세요</span></div>`
+    +`<div class="quiz-list">`+qs.map((q,i)=>`<div class="quiz-q" data-qi="${i}"><div class="quiz-prompt"><span class="qnum">${i+1}</span><span>${esc(q.prompt)}</span></div><div class="quiz-opts">`+q.options.map(o=>`<button class="quiz-opt" data-qi="${i}" data-opt="${esc(o)}">${esc(o)}</button>`).join("")+`</div></div>`).join("")+`</div>`
+    +`<div class="quiz-foot"><button class="sel-btn" data-act="history">← 기록</button><button class="sel-btn" data-act="close">닫기</button></div>`);
+  const scoreEl=sheet.querySelector("#quizScore");
+  sheet.querySelector(".quiz-list").addEventListener("click",e=>{
+    const b=e.target.closest(".quiz-opt"); if(!b)return;
+    const qi=Number(b.dataset.qi), block=sheet.querySelector(`.quiz-q[data-qi="${qi}"]`);
+    if(!block||block.classList.contains("done"))return;
+    block.classList.add("done"); const ans=qs[qi].answer;
+    block.querySelectorAll(".quiz-opt").forEach(o=>{ if(o.dataset.opt===ans)o.classList.add("correct"); else if(o===b)o.classList.add("wrong"); o.disabled=true; });
+    answered++; if(b.dataset.opt===ans)correct++; scoreEl.textContent=`${correct} / ${qs.length}`;
+    if(answered===qs.length)scoreEl.classList.add("fin");
+  });
+}
+async function logout(){ try{ await fetch(API_BASE+"/auth/logout",{method:"POST",credentials:"include"}); }catch{} ME=null; for(const k in recent)recent[k].length=0; renderRecent(); renderAccount(); closeSheet(); }
+
+acctBtn.addEventListener("click",()=> ME?accountSheet():showLogin("login"));
+$("#pickLoginBtn").addEventListener("click",()=> ME?accountSheet():showLogin("login"));
+$("#histBtn").addEventListener("click",()=>{
+  if(ME){ if(["korean","english","hanja","ancient"].includes(dict)) histDict=dict; histView="list"; histSelMode=false; histSel.clear(); renderHistorySheet(); }
+  else loginPromptModal();
+});
+/* 로그인 화면 · 중앙 모달 이벤트 */
+$("#loginBack").addEventListener("click",hideLogin);
+$("#authSubmitBtn").addEventListener("click",authSubmit);
+$("#authUser").addEventListener("keydown",e=>{ if(e.key==="Enter")$("#authPw").focus(); });
+$("#authPw").addEventListener("keydown",e=>{ if(e.key==="Enter"){ if(authMode==="register")$("#authPw2").focus(); else authSubmit(); } });
+$("#authPw2").addEventListener("keydown",e=>{ if(e.key==="Enter")authSubmit(); });
+loginScreen.addEventListener("click",e=>{ const t=e.target.closest("[data-authmode]"); if(t){ authMode=t.dataset.authmode; renderLoginScreen(); } });
+promptBack.addEventListener("click",e=>{ if(e.target===promptBack) closePrompt(); });
+promptCard.addEventListener("click",e=>{ const b=e.target.closest("[data-prompt]"); if(!b)return; const a=b.dataset.prompt; closePrompt(); if(a==="gologin")showLogin("login"); });
+sheetBack.addEventListener("click",e=>{ if(e.target===sheetBack) closeSheet(); });
+sheet.addEventListener("click",e=>{
+  const tab=e.target.closest("[data-tab]");
+  if(tab){ if(histDict!==tab.dataset.tab){ histDict=tab.dataset.tab; histSelMode=false; histSel.clear(); histView="list"; renderHistorySheet(); } return; }
+  const act=e.target.closest("[data-act]");
+  if(act){ const a=act.dataset.act;
+    if(a==="close") return closeSheet();
+    if(a==="history"){ histView="list"; histSelMode=false; histSel.clear(); return renderHistorySheet(); }
+    if(a==="logout") return logout();
+    if(a==="trashview"){ histView="trash"; return renderHistorySheet(); }
+    if(a==="backlist"){ histView="list"; return renderHistorySheet(); }
+    if(a==="cancelsel"){ histSelMode=false; histSel.clear(); paintAllRows(); refreshAct(); return; }
+    if(a==="trash") return moveSelToTrash();
+    if(a==="quiz") return makeQuiz();
+    if(a==="emptytrash") return emptyTrash();
+  }
+  const rs=e.target.closest("[data-restore]");
+  if(rs){ fetch(`${API_BASE}/api/history/restore`,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify({ids:[Number(rs.dataset.restore)]})}).then(fillTrash); return; }
+  const del=e.target.closest("[data-del]");
+  if(del){ fetch(`${API_BASE}/api/history/${del.dataset.del}`,{method:"DELETE",credentials:"include"}).then(fillTrash); return; }
+});
+/* ---------- 손글씨 인식 ---------- */
+let hwLang="hanja", hwStrokes=[], hwCv=null, hwCtx=null, hwW=400, hwH=400;
+function openHandwriting(){
+  hwLang = dict==="hanja" ? "hanja" : "hangul";   // 한자사전=한자, 중세국어=한글
+  openSheet(hHead("손글씨 입력")
+    +`<div class="hw-padwrap"><canvas id="hwpad" class="hw-pad"></canvas><span class="hw-ph" id="hwPh">한 글자씩 또박또박 써 보세요</span></div>`
+    +`<div class="hw-tools"><button class="sel-btn" data-act="hwundo">↶ 한 획</button><button class="sel-btn" data-act="hwclear">지우기</button><button class="sel-btn primary" data-act="hwreco">인식</button></div>`
+    +`<div class="hw-cands" id="hwCands"><span class="hw-ph">${dict==="hanja"?"인식 후 비슷한 한자 12자에서 골라요":"인식 후 후보를 누르면 검색돼요"}</span></div>`);
+  requestAnimationFrame(setupPad);
+}
+function setupPad(){
+  const cv=sheet.querySelector("#hwpad"); if(!cv)return;
+  const rect=cv.getBoundingClientRect(); const dpr=window.devicePixelRatio||1;
+  cv.width=Math.round(rect.width*dpr); cv.height=Math.round(rect.height*dpr);
+  const ctx=cv.getContext("2d"); ctx.scale(dpr,dpr);
+  ctx.lineWidth=4.5; ctx.lineCap="round"; ctx.lineJoin="round"; ctx.strokeStyle="#1C1B19";
+  hwCv=cv; hwCtx=ctx; hwW=rect.width; hwH=rect.height; hwStrokes=[];
+  let drawing=false, cur=null; const t0=Date.now();
+  const pos=e=>{ const r=cv.getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; };
+  cv.onpointerdown=e=>{ e.preventDefault(); drawing=true; cur=[[],[],[]]; const[x,y]=pos(e); cur[0].push(Math.round(x));cur[1].push(Math.round(y));cur[2].push(Date.now()-t0); ctx.beginPath(); ctx.moveTo(x,y); try{cv.setPointerCapture(e.pointerId);}catch{} const ph=sheet.querySelector("#hwPh"); if(ph)ph.style.display="none"; };
+  cv.onpointermove=e=>{ if(!drawing)return; const[x,y]=pos(e); cur[0].push(Math.round(x));cur[1].push(Math.round(y));cur[2].push(Date.now()-t0); ctx.lineTo(x,y); ctx.stroke(); };
+  const end=()=>{ if(!drawing)return; drawing=false; if(cur&&cur[0].length>1)hwStrokes.push(cur); cur=null; };
+  cv.onpointerup=end; cv.onpointercancel=end; cv.onpointerleave=end;
+}
+function hwRepaint(){ if(!hwCtx||!hwCv)return; hwCtx.clearRect(0,0,hwCv.width,hwCv.height);
+  for(const s of hwStrokes){ hwCtx.beginPath(); for(let i=0;i<s[0].length;i++){ const x=s[0][i],y=s[1][i]; i?hwCtx.lineTo(x,y):hwCtx.moveTo(x,y);} hwCtx.stroke(); } }
+function hwClearPad(){ hwStrokes=[]; if(hwCtx&&hwCv)hwCtx.clearRect(0,0,hwCv.width,hwCv.height); const ph=sheet.querySelector("#hwPh"); if(ph)ph.style.display=""; const c=sheet.querySelector("#hwCands"); if(c)c.innerHTML=`<span class="hw-ph">인식 결과가 여기에 표시됩니다</span>`; }
+function hwUndo(){ hwStrokes.pop(); hwRepaint(); }
+async function hwReco(){
+  const cands=sheet.querySelector("#hwCands"); if(!cands)return;
+  if(!hwStrokes.length){ cands.innerHTML=`<span class="hw-ph">먼저 글자를 써 주세요.</span>`; return; }
+  if(!BACKEND){ cands.innerHTML=`<span class="hw-ph">손글씨 인식은 서버 연결이 필요해요(배포 후 동작).</span>`; return; }
+  cands.innerHTML=`<span class="hw-ph">인식 중…</span>`;
+  try{
+    const r=await fetch(`${API_BASE}/handwriting`,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"include",body:JSON.stringify({lang:hwLang,width:Math.round(hwW),height:Math.round(hwH),ink:hwStrokes})});
+    const list=((await r.json()).candidates||[]).slice(0,12);
+    cands.className = "hw-cands"+(hwLang==="hanja"?" grid":"");
+    cands.innerHTML=list.length?list.map(c=>`<button class="hw-cand serif" data-hwpick="${esc(c)}">${esc(c)}</button>`).join(""):`<span class="hw-ph">인식 결과가 없어요. 다시 써 보세요.</span>`;
+  }catch{ cands.innerHTML=`<span class="hw-ph">인식하지 못했어요.</span>`; }
+}
+$("#penBtn").addEventListener("click",openHandwriting);
+sheet.addEventListener("click",e=>{
+  const hwp=e.target.closest("[data-hwpick]");
+  if(hwp){ const q=hwp.dataset.hwpick; closeSheet(); input.value=q; toggleClear(); doSearch(q); return; }
+  const act=e.target.closest("[data-act]"); if(!act)return; const a=act.dataset.act;
+  if(a==="hwundo")return hwUndo();
+  if(a==="hwclear")return hwClearPad();
+  if(a==="hwreco")return hwReco();
+});
+/* ---------- 옛한글 자판(중세국어) ----------
+   현대 자판에 없는 옛 자모(아래아 ㆍ 등)를 화면에서 입력. 첫가끝(초성·중성·종성 조합) 자모로 옛글자를 만든다. */
+const CHO_CP={"ㄱ":0x1100,"ㄲ":0x1101,"ㄴ":0x1102,"ㄷ":0x1103,"ㄸ":0x1104,"ㄹ":0x1105,"ㅁ":0x1106,"ㅂ":0x1107,"ㅃ":0x1108,"ㅅ":0x1109,"ㅆ":0x110A,"ㅇ":0x110B,"ㅈ":0x110C,"ㅉ":0x110D,"ㅊ":0x110E,"ㅋ":0x110F,"ㅌ":0x1110,"ㅍ":0x1111,"ㅎ":0x1112,"ㅿ":0x1140,"ㆁ":0x114C,"ㆆ":0x1159,"ㅸ":0x112B,"ㅱ":0x111D,"ㆄ":0x1157,"ㆅ":0x1158};
+const JUNG_CP={"ㅏ":0x1161,"ㅐ":0x1162,"ㅑ":0x1163,"ㅒ":0x1164,"ㅓ":0x1165,"ㅔ":0x1166,"ㅕ":0x1167,"ㅖ":0x1168,"ㅗ":0x1169,"ㅘ":0x116A,"ㅙ":0x116B,"ㅚ":0x116C,"ㅛ":0x116D,"ㅜ":0x116E,"ㅝ":0x116F,"ㅞ":0x1170,"ㅟ":0x1171,"ㅠ":0x1172,"ㅡ":0x1173,"ㅢ":0x1174,"ㅣ":0x1175,"ㆍ":0x119E,"ㆎ":0x119F};
+const JONG_CP={"ㄱ":0x11A8,"ㄲ":0x11A9,"ㄳ":0x11AA,"ㄴ":0x11AB,"ㄵ":0x11AC,"ㄶ":0x11AD,"ㄷ":0x11AE,"ㄹ":0x11AF,"ㄺ":0x11B0,"ㄻ":0x11B1,"ㄼ":0x11B2,"ㄽ":0x11B3,"ㄾ":0x11B4,"ㄿ":0x11B5,"ㅀ":0x11B6,"ㅁ":0x11B7,"ㅂ":0x11B8,"ㅄ":0x11B9,"ㅅ":0x11BA,"ㅆ":0x11BB,"ㅇ":0x11BC,"ㅈ":0x11BD,"ㅊ":0x11BE,"ㅋ":0x11BF,"ㅌ":0x11C0,"ㅍ":0x11C1,"ㅎ":0x11C2,"ㅿ":0x11EB,"ㆁ":0x11F0,"ㆆ":0x11F9};
+const KB_CHO=["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ","ㅿ","ㆁ","ㆆ","ㅸ","ㅱ","ㆄ","ㆅ"];
+const KB_JUNG=["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ","ㆍ","ㆎ"];
+const KB_JONG=["ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ","ㅿ","ㆁ","ㆆ"];
+const OLD_JAMO=new Set(["ㅿ","ㆁ","ㆆ","ㅸ","ㅱ","ㆄ","ㆅ","ㆍ","ㆎ"]);
+let jcho=null,jjung=null,jjong=null,jbuf="";
+const cc=cp=>cp?String.fromCharCode(cp):"";
+const jamoCur=()=>cc(jcho)+cc(jjung)+cc(jjong);
+function jamoRender(){ const full=jbuf+jamoCur(); const p=sheet.querySelector("#jamoPrev"); if(p)p.textContent=full; const ph=sheet.querySelector("#jamoPh"); if(ph)ph.style.display=full?"none":""; }
+function jamoCommit(){ jbuf+=jamoCur(); jcho=jjung=jjong=null; }
+function jamoCho(k){ const c=CHO_CP[k]; if(c==null)return; if(jcho==null||(jjung==null&&jjong==null)){ jcho=c; } else { jamoCommit(); jcho=c; } jamoRender(); }
+function jamoJung(k){ const v=JUNG_CP[k]; if(v==null)return; if(jjung==null){ jjung=v; } else { jamoCommit(); jjung=v; } jamoRender(); }
+function jamoJong(k){ const t=JONG_CP[k]; if(t==null)return; if(jjung!=null){ jjong=t; } jamoRender(); }
+function jamoBack(){ if(jjong!=null)jjong=null; else if(jjung!=null)jjung=null; else if(jcho!=null)jcho=null; else jbuf=[...jbuf].slice(0,-1).join(""); jamoRender(); }
+function jamoClear(){ jcho=jjung=jjong=null; jbuf=""; jamoRender(); }
+function jamoDoSearch(){ jamoCommit(); const q=jbuf.trim(); closeSheet(); if(q){ input.value=q; toggleClear(); doSearch(q); } }
+function openJamoKeyboard(){
+  jcho=jjung=jjong=null; jbuf="";
+  const keys=(arr,attr)=>arr.map(k=>`<button class="jkey${OLD_JAMO.has(k)?' old':''}" data-${attr}="${esc(k)}">${esc(k)}</button>`).join("");
+  openSheet(hHead("옛한글 자판")
+    +`<div class="jamo-prevwrap"><span class="jamo-prev" id="jamoPrev"></span><span class="jamo-ph" id="jamoPh">초성·중성·종성을 눌러 옛말을 입력하세요 (예: ᄆᆞᅀᆞᆷ)</span></div>`
+    +`<div class="jamo-hint"><b>주황색</b> 자모(ㆍ ㅿ ㆁ ㆆ …)는 지금은 안 쓰는 옛 자모예요. 초성→중성→종성 순으로 누르면 한 글자가 완성돼요.</div>`
+    +`<div class="jamo-scroll"><div class="jamo-sec">초성</div><div class="jamo-grid">${keys(KB_CHO,"jcho")}</div>`
+    +`<div class="jamo-sec">중성</div><div class="jamo-grid">${keys(KB_JUNG,"jjung")}</div>`
+    +`<div class="jamo-sec">종성 (받침)</div><div class="jamo-grid">${keys(KB_JONG,"jjong")}</div></div>`
+    +`<div class="jamo-tools"><button class="sel-btn" data-jk="back">⌫ 한 자모</button><button class="sel-btn" data-jk="clear">전체 지우기</button><button class="sel-btn primary" data-jk="search">검색</button></div>`);
+  jamoRender();
+}
+$("#kbdBtn").addEventListener("click",openJamoKeyboard);
+sheet.addEventListener("click",e=>{
+  const c=e.target.closest("[data-jcho]"); if(c){ jamoCho(c.dataset.jcho); return; }
+  const v=e.target.closest("[data-jjung]"); if(v){ jamoJung(v.dataset.jjung); return; }
+  const t=e.target.closest("[data-jjong]"); if(t){ jamoJong(t.dataset.jjong); return; }
+  const a=e.target.closest("[data-jk]"); if(a){ const k=a.dataset.jk; if(k==="back")jamoBack(); else if(k==="clear")jamoClear(); else if(k==="search")jamoDoSearch(); }
+});
+initBackend();
+</script>
+</body>
+</html>
