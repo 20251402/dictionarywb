@@ -152,6 +152,7 @@
   @media (prefers-reduced-motion:reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important;}}
   .bar-actions{display:flex;align-items:center;gap:6px;}
   .hanmodes{display:flex;gap:6px;margin-top:9px;}
+  .hanscope{margin-top:11px;}
   .hanmode{flex:0 0 auto;min-width:58px;height:32px;border-radius:9px;border:1.5px solid var(--line);background:var(--card);color:var(--ink-2);font-size:13.5px;font-weight:600;}
   .hanmode.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);}
   .browse-head{font-size:13.5px;font-weight:700;color:var(--ink-2);margin:2px 2px 12px;}
@@ -339,6 +340,9 @@
 
     /* 검색 결과 목록: 2열 */
     .reslist-grid{grid-template-columns:1fr 1fr;gap:12px;}
+    /* 한자 찾아보기: 한 줄에 5칸(빽빽함 완화) */
+    .browse-grid{grid-template-columns:repeat(5,1fr);gap:10px;}
+    .browse-ch .bc{font-size:34px;}
 
     /* 하단 시트 → 화면 중앙 모달 */
     .sheet-back{align-items:center;}
@@ -397,6 +401,11 @@
         <button class="seg" role="tab" data-dict="english"   aria-selected="false">영어</button>
         <button class="seg" role="tab" data-dict="hanja"     aria-selected="false">漢字</button>
         <button class="seg" role="tab" data-dict="ancient"   aria-selected="false">중세</button>
+      </div>
+
+      <div class="hanmodes hanscope" id="hanScope" hidden>
+        <button class="hanmode on" data-hanscope="char">한자 검색</button>
+        <button class="hanmode" data-hanscope="word">단어 검색</button>
       </div>
 
       <div class="searchrow" id="searchrow">
@@ -502,19 +511,20 @@ const SAMPLE = {
 /* 상태 */
 let dict="korean";
 let hanjaMode="eum";          // 한자사전: 음(eum) / 뜻(hun)
+let hanjaScope="char";        // 한자사전: 한자(char) / 단어(word) 검색
 const recent={korean:[],english:[],hanja:[],ancient:[]};
 
 /* 요소 */
 const $=s=>document.querySelector(s);
 const picker=$("#picker"),main=$("#main"),dresults=$("#dresults");
-const input=$("#q"),clearBtn=$("#clear"),recentBox=$("#recent"),searchrow=$("#searchrow"),hanModes=$("#hanModes");
+const input=$("#q"),clearBtn=$("#clear"),recentBox=$("#recent"),searchrow=$("#searchrow"),hanModes=$("#hanModes"),hanScope=$("#hanScope");
 const barName=$("#barName");
 
 /* ---------- 데이터 (한 곳에 격리) ---------- */
 async function fetchEntries(d,query){
   const q=query.trim(); if(!q) return [];
   if(BACKEND){
-    const extra = d==="hanja" ? `&mode=${encodeURIComponent(hanjaMode)}` : "";
+    const extra = d==="hanja" ? `&mode=${encodeURIComponent(hanjaMode)}&scope=${encodeURIComponent(hanjaScope)}` : "";
     const r=await fetch(`${API_BASE}/search?dict=${encodeURIComponent(d)}&query=${encodeURIComponent(q)}${extra}`,{credentials:"include"});
     if(!r.ok) throw new Error("API "+r.status); return (await r.json()).results||[];
   }
@@ -553,11 +563,11 @@ let reqId=0;
 let lastResults=[], lastSelDict="";
 async function doSearch(query){
   const q=(query??input.value).trim(); input.value=q; toggleClear();
-  if(!q){showEmpty(); hanModes.hidden=(dict!=="hanja"); return;}
+  if(!q){showEmpty(); updateHanUI(); return;}
   const my=++reqId; showLoading();
   try{const entries=await fetchEntries(dict,q);
     if(my!==reqId)return;
-    hanModes.hidden=(dict!=="hanja"); if(dict==="hanja") syncHanModes();
+    updateHanUI();
     if(!entries.length){showNoResult(q);return;}
     addRecent(q);
     if(dict==="hanja"){
@@ -589,9 +599,21 @@ async function selectEntry(i){
   sl.innerHTML = syn.length ? syn.slice(0,10).map(w=>`<button class="syn-chip" data-find="${esc(w)}">${esc(w)}</button>`).join("") : `<span class="syn-empty">유의어 정보가 없어요.</span>`;
 }
 function syncHanModes(){ hanModes.querySelectorAll(".hanmode").forEach(b=>b.classList.toggle("on",b.dataset.hanmode===hanjaMode)); }
+function syncHanScope(){ hanScope.querySelectorAll(".hanmode").forEach(b=>b.classList.toggle("on",b.dataset.hanscope===hanjaScope)); }
+// 한자사전 토글 노출: 한자/단어는 한자모드에서 항상, 음/뜻은 '한자 검색'일 때만
+function updateHanUI(){
+  hanScope.hidden=(dict!=="hanja");
+  hanModes.hidden=!(dict==="hanja"&&hanjaScope==="char");
+  if(!hanScope.hidden) syncHanScope();
+  if(!hanModes.hidden) syncHanModes();
+}
 hanModes.addEventListener("click",e=>{
   const b=e.target.closest(".hanmode"); if(!b)return;
   if(hanjaMode!==b.dataset.hanmode){ hanjaMode=b.dataset.hanmode; syncHanModes(); if(input.value.trim())doSearch(input.value.trim()); }
+});
+hanScope.addEventListener("click",e=>{
+  const b=e.target.closest(".hanmode"); if(!b)return;
+  if(hanjaScope!==b.dataset.hanscope){ hanjaScope=b.dataset.hanscope; updateHanUI(); input.placeholder=hanjaScope==="word"?"한자어(낱말)를 검색":"한자 또는 음/뜻으로 검색"; if(input.value.trim())doSearch(input.value.trim()); }
 });
 
 /* 최근 검색 */
@@ -607,7 +629,7 @@ function setMode(d,{clear=false}={}){
   document.querySelectorAll(".switcher .seg").forEach(b=>b.setAttribute("aria-selected",b.dataset.dict===d?"true":"false"));
   document.getElementById("penBtn").style.display=(d==="hanja"||d==="ancient")?"grid":"none";   // 손글씨: 한자·중세
   document.getElementById("kbdBtn").hidden=(d!=="ancient");                                      // 옛한글 자판: 중세국어만
-  hanModes.hidden=(d!=="hanja"); if(d==="hanja") syncHanModes();                                 // 음/뜻: 한자사전에서 항상 표시
+  updateHanUI();                                 // 한자/단어 · 음/뜻 토글 노출 갱신
   input.placeholder=LABEL[d].ph;
   if(clear){input.value="";toggleClear();}
   renderRecent();

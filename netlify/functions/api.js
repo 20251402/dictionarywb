@@ -56,6 +56,13 @@ export const handler = async (event, context) => {
   try { connectLambda(event); } catch { }
   // 원본 요청 경로 보장(리라이트로 들어와도 Express가 실제 경로를 보도록)
   if (event.rawUrl) { try { event.path = new URL(event.rawUrl).pathname; } catch { } }
+  // Blobs 자가진단: GET /api/blobcheck → 저장(계정/기록) 가능 여부를 원격에서 바로 확인
+  if (event.path === "/api/blobcheck") {
+    let roundTrip = false, error = null;
+    try { const b = blob(); await b.setJSON("__healthcheck", { t: Date.now() }); roundTrip = !!(await b.get("__healthcheck", { type: "json" })); }
+    catch (e) { error = e.message; }
+    return { statusCode: 200, headers: { "content-type": "application/json" }, body: JSON.stringify({ blobsContext: !!event.blobs, roundTrip, error }) };
+  }
   STATE.data = await load();
   try { store.purgeExpired?.(); } catch { }       // 30일 지난 휴지통 정리
   const res = await sls(event, context);
